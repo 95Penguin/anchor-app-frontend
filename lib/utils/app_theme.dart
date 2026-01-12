@@ -1,52 +1,60 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // 1. 定义核心颜色 (static const 确保全局可用且性能高)
-  static const Color backgroundDark = Color(0xFF121212);
-  static const Color accentGreen = Color(0xFF00FFAB);
-  static const Color accentPurple = Color(0xFFBB86FC);
-  static const Color cardBackground = Color(0xFF1E1E1E);
+  // 1. 定义新的暖色调颜色常量
+  static const Color backgroundWarm = Color(0xFFFFF5E1); 
+  static const Color accentWarmOrange = Color(0xFFFF8A65); 
+  static const Color textBrown = Color(0xFF5D4037); 
+  static const Color textLightBrown = Color(0xFF8D6E63); 
+  static const Color paperColor = Color(0xFFFFF9EE);
 
-  // 2. 定义主题
-  static ThemeData get darkTheme {
+  // 2. 【别名修复】：为了让旧代码不报错，我们把旧名字指向新颜色
+  static const Color accentGreen = accentWarmOrange; 
+  static const Color accentPurple = accentWarmOrange; 
+  static const Color backgroundDark = backgroundWarm;
+  static const Color cardBackground = paperColor;
+
+  static ThemeData get warmTheme {
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: backgroundDark,
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: backgroundWarm,
       
-      // 颜色方案
-      colorScheme: const ColorScheme.dark(
-        primary: accentGreen,
-        secondary: accentPurple,
-        surface: cardBackground,
+      textTheme: const TextTheme(
+        bodyLarge: TextStyle(color: textBrown),
+        bodyMedium: TextStyle(color: textBrown),
+        titleMedium: TextStyle(color: textBrown),
+        titleLarge: TextStyle(color: textBrown, fontWeight: FontWeight.bold),
       ),
 
-      // 【核心修复点】：这里必须用 CardThemeData 而不是 CardTheme
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: accentWarmOrange,
+        brightness: Brightness.light,
+        primary: accentWarmOrange,
+        surface: paperColor,
+      ),
+
       cardTheme: CardThemeData(
-        color: cardBackground,
-        elevation: 4,
-        margin: EdgeInsets.zero,
+        color: paperColor,
+        elevation: 2,
+        shadowColor: textBrown.withOpacity(0.1),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: textBrown.withOpacity(0.05)),
         ),
       ),
 
-      // 顶部标题栏
       appBarTheme: const AppBarTheme(
-        backgroundColor: backgroundDark,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: accentGreen,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
+        iconTheme: IconThemeData(color: textBrown),
+        titleTextStyle: TextStyle(color: textBrown, fontSize: 20, fontWeight: FontWeight.bold),
       ),
 
-      // 底部导航栏
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: backgroundDark,
-        selectedItemColor: accentGreen,
+        backgroundColor: Colors.white,
+        selectedItemColor: accentWarmOrange,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
       ),

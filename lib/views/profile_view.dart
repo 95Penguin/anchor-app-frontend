@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../utils/app_theme.dart';
+import '../models/user_model.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({Key? key}) : super(key: key);
@@ -19,7 +20,7 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   void initState() {
     super.initState();
-    // 初始化时获取当前用户信息
+    // 初始化数据
     final user = Provider.of<AppProvider>(context, listen: false).user;
     _nameController = TextEditingController(text: user.name);
     _ageController = TextEditingController(text: user.age.toString());
@@ -35,129 +36,93 @@ class _ProfileViewState extends State<ProfileView> {
     );
     setState(() => _isEditing = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('角色存档已更新'), backgroundColor: AppTheme.accentGreen),
+      const SnackBar(
+        content: Text('角色存档已同步', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppTheme.textBrown,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = Provider.of<AppProvider>(context);
-    final user = provider.user;
+    final user = Provider.of<AppProvider>(context).user;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('角色信息', style: TextStyle(color: AppTheme.accentGreen)),
+        title: const Text('角色档案'),
         actions: [
           IconButton(
-            icon: Icon(_isEditing ? Icons.check_circle : Icons.edit_note, color: AppTheme.accentGreen, size: 28),
-            onPressed: () {
-              if (_isEditing) {
-                _saveProfile();
-              } else {
-                setState(() => _isEditing = true);
-              }
-            },
+            icon: Icon(
+              _isEditing ? Icons.check_circle : Icons.edit_note,
+              color: AppTheme.accentWarmOrange,
+              size: 30,
+            ),
+            onPressed: () => _isEditing ? _saveProfile() : setState(() => _isEditing = true),
           ),
+          const SizedBox(width: 10),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        // 设置水平间距，确保不贴边，与时间轴保持一致
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Column(
+          // 【核心修复】：stretch 强制子组件（卡片）占满屏幕宽度
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 10),
-            // 头像
-            Center(
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppTheme.accentGreen.withOpacity(0.2),
-                    child: Text(
-                      user.name.isNotEmpty ? user.name[0] : "?",
-                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.accentGreen),
-                    ),
-                  ),
-                  if (_isEditing)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: AppTheme.accentPurple,
-                        child: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
+            // 1. 头像区域 (包裹在 Center 里防止被横向拉伸)
+            Center(child: _buildAvatarSection(user)),
+            const SizedBox(height: 40),
 
-            // 基本信息表单
+            // 2. 基础设定
+            _buildSectionTitle("基础设定"),
+            const SizedBox(height: 12),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    TextField(
-                      controller: _nameController,
-                      enabled: _isEditing,
-                      decoration: const InputDecoration(
-                        labelText: "角色名",
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _ageController,
-                      enabled: _isEditing,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "年龄",
-                        prefixIcon: Icon(Icons.history_toggle_off),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _bioController,
-                      enabled: _isEditing,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: "座右铭",
-                        prefixIcon: Icon(Icons.auto_awesome_mosaic),
-                      ),
-                    ),
+                    _buildGameInput("姓名", _nameController, Icons.person_outline),
+                    const SizedBox(height: 20),
+                    _buildGameInput("年龄", _ageController, Icons.cake_outlined, isNumber: true),
+                    const SizedBox(height: 20),
+                    _buildGameInput("座右铭", _bioController, Icons.format_quote_outlined, maxLines: 2),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
-            // 属性数值展示
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(" 属性详情", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.accentGreen)),
-            ),
-            const SizedBox(height: 8),
+            // 3. 数值面板
+            _buildSectionTitle("数值面板"),
+            const SizedBox(height: 12),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   children: user.attributes.toMap().entries.map((entry) {
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
                         children: [
-                          Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: LinearProgressIndicator(
-                              value: (entry.value % 100) / 100,
-                              backgroundColor: Colors.black26,
-                              color: AppTheme.accentGreen,
-                            ),
+                          SizedBox(
+                            width: 35,
+                            child: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
                           ),
                           const SizedBox(width: 12),
-                          Text("${entry.value}", style: const TextStyle(color: AppTheme.accentPurple, fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: LinearProgressIndicator(
+                                value: (entry.value % 100) / 100,
+                                backgroundColor: AppTheme.textBrown.withOpacity(0.05),
+                                color: AppTheme.accentWarmOrange,
+                                minHeight: 8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Text("${entry.value}", style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentWarmOrange)),
                         ],
                       ),
                     );
@@ -165,31 +130,97 @@ class _ProfileViewState extends State<ProfileView> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
-            // 危险区域/其他
-            Card(
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.help_outline, color: Colors.grey),
-                    title: const Text("关于 Anchors"),
-                    onTap: () {},
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: const Icon(Icons.delete_forever, color: Colors.redAccent),
-                    title: const Text("清除所有本地记录"),
-                    onTap: () {
-                      // 这里可以以后接入 Provider 的清除方法
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
+            // 4. 其他信息 (这些磁贴也会跟随 Column 自动撑开)
+            _buildSimpleTile(Icons.info_outline, "版本信息", "Anchors v1.0.0"),
+            const SizedBox(height: 12),
+            _buildSimpleTile(Icons.help_outline, "使用帮助", "每一次投掷都是一次成长"),
+            
+            const SizedBox(height: 60), 
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAvatarSection(UserModel user) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: AppTheme.accentWarmOrange.withOpacity(0.3), width: 2),
+          ),
+          child: CircleAvatar(
+            radius: 55,
+            backgroundColor: AppTheme.accentWarmOrange.withOpacity(0.1),
+            child: Text(
+              user.name.isNotEmpty ? user.name[0] : "旅",
+              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.textBrown),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          "等级 ${user.level} 冒险者",
+          style: const TextStyle(color: AppTheme.accentWarmOrange, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textBrown),
+      ),
+    );
+  }
+
+  Widget _buildGameInput(String label, TextEditingController controller, IconData icon, {bool isNumber = false, int maxLines = 1}) {
+    return TextField(
+      controller: controller,
+      enabled: _isEditing,
+      maxLines: maxLines,
+      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      // 核心修复：显式文字颜色
+      style: const TextStyle(color: AppTheme.textBrown, fontSize: 16),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppTheme.textLightBrown),
+        prefixIcon: Icon(icon, color: AppTheme.accentWarmOrange, size: 22),
+        filled: true,
+        fillColor: _isEditing ? Colors.white : Colors.transparent,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  Widget _buildSimpleTile(IconData icon, String title, String subtitle) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.textBrown.withOpacity(0.05)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppTheme.textLightBrown, size: 24),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
+              Text(subtitle, style: const TextStyle(fontSize: 12, color: AppTheme.textLightBrown)),
+            ],
+          )
+        ],
       ),
     );
   }
