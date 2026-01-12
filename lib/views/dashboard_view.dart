@@ -4,7 +4,6 @@ import '../providers/app_provider.dart';
 import '../models/user_model.dart';
 import '../utils/app_theme.dart';
 import '../widgets/radar_chart_widget.dart';
-import '../widgets/anchor_card.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({Key? key}) : super(key: key);
@@ -22,13 +21,14 @@ class _DashboardViewState extends State<DashboardView>
   @override
   void initState() {
     super.initState();
-    // 呼吸动画控制
+    // 呼吸动画: 2.5秒一个来回
     _breathController = AnimationController(
-      duration: const Duration(milliseconds: 3000),
+      duration: const Duration(milliseconds: 2500),
       vsync: this,
     )..repeat(reverse: true);
 
-    _breathAnimation = Tween<double>(begin: -10.0, end: 10.0).animate(
+    // 调整浮动幅度为 15 像素
+    _breathAnimation = Tween<double>(begin: -15.0, end: 15.0).animate(
       CurvedAnimation(parent: _breathController, curve: Curves.easeInOut),
     );
   }
@@ -48,29 +48,58 @@ class _DashboardViewState extends State<DashboardView>
     return Scaffold(
       body: Stack(
         children: [
-          // 1. 背景渐变
+          // 1. 背景层: 暖色调渐变
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [Color(0xFFFFE0B2), Color(0xFFFFF9C4), Color(0xFFFFF5E1)],
+                colors: [
+                  Color(0xFFFFE0B2), // 浅橘
+                  Color(0xFFFFF9C4), // 浅黄
+                  Color(0xFFFFF5E1), // 奶油
+                ],
               ),
             ),
           ),
 
-          // 2. 人物立绘层
+          // 2. 装饰层: 底部光晕 (增强角色站立感)
+          Positioned(
+            bottom: -50,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: 300,
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.4),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.accentWarmOrange.withOpacity(0.2),
+                      blurRadius: 100,
+                      spreadRadius: 20,
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 3. 人物立绘层 (带呼吸动画)
           AnimatedBuilder(
             animation: _breathAnimation,
             builder: (context, child) {
               return Positioned(
-                bottom: 50 + _breathAnimation.value,
+                // 调低 bottom，让立绘“踩”在底部导航栏上
+                bottom: 10 + _breathAnimation.value, 
                 left: 0,
                 right: 0,
                 child: Center(
                   child: Image.asset(
                     'assets/images/avatar.png',
-                    height: screenHeight * 0.85,
+                    height: screenHeight * 0.9, // 稍微增大立绘，填充卡片撤掉后的空白
                     fit: BoxFit.contain,
                     alignment: Alignment.bottomCenter,
                   ),
@@ -79,102 +108,118 @@ class _DashboardViewState extends State<DashboardView>
             },
           ),
 
-          // 3. 左上角 HUD
+          // 4. 左上角 HUD: 角色状态
           Positioned(
             top: 60,
             left: 20,
             child: _buildStatusHUD(user),
           ),
 
-          // 4. 右上角迷你雷达
+          // 5. 右上角 HUD: 迷你雷达
           Positioned(
             top: 60,
             right: 20,
             child: _buildMiniRadar(user),
           ),
 
-          // 5. 底部卡片流
-          Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: _buildBottomCards(provider),
-          ),
-
-          // 6. 全屏雷达图弹窗
+          // 6. 全屏雷达图弹窗 (点击右上角触发)
           if (_showFullRadar) _buildFullRadarOverlay(user),
         ],
       ),
     );
   }
 
+  // 构建状态栏 HUD
   Widget _buildStatusHUD(UserModel user) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: AppTheme.paperColor.withOpacity(0.9), // 使用羊皮纸色，高对比度
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.textBrown.withOpacity(0.1)),
-        boxShadow: [BoxShadow(color: AppTheme.textBrown.withOpacity(0.1), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.textBrown.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(user.name, 
-            style: const TextStyle(color: AppTheme.textBrown, fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: 120,
-            child: LinearProgressIndicator(
-              value: user.getExpProgress(),
-              backgroundColor: AppTheme.textBrown.withOpacity(0.05),
-              color: AppTheme.accentWarmOrange,
-              minHeight: 6,
+          Text(
+            user.name,
+            style: const TextStyle(
+              color: AppTheme.textBrown,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 4),
-          Text('Lv.${user.level} 冒险者', 
-            style: const TextStyle(color: AppTheme.accentWarmOrange, fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentWarmOrange,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'LV.${user.level}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 100,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
+                  child: LinearProgressIndicator(
+                    value: user.getExpProgress(),
+                    backgroundColor: AppTheme.textBrown.withOpacity(0.05),
+                    color: AppTheme.accentWarmOrange,
+                    minHeight: 6,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
+  // 构建迷你雷达 HUD
   Widget _buildMiniRadar(UserModel user) {
     return GestureDetector(
       onTap: () => setState(() => _showFullRadar = true),
       child: Container(
-        width: 80, height: 80,
-        padding: const EdgeInsets.all(5),
+        width: 85,
+        height: 85,
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
+          color: AppTheme.paperColor.withOpacity(0.9),
           shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: AppTheme.textBrown.withOpacity(0.1), blurRadius: 10)],
+          border: Border.all(color: AppTheme.textBrown.withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.textBrown.withOpacity(0.1),
+              blurRadius: 15,
+            )
+          ],
         ),
         child: RadarChartWidget(attributes: user.attributes, isMini: true),
       ),
     );
   }
 
-  Widget _buildBottomCards(AppProvider provider) {
-    final recent = provider.getRecentAnchors(3);
-    if (recent.isEmpty) return const SizedBox();
-
-    return SizedBox(
-      height: 140,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: recent.length,
-        itemBuilder: (context, index) => Container(
-          width: 280,
-          margin: const EdgeInsets.only(right: 15),
-          child: AnchorCard(anchor: recent[index]),
-        ),
-      ),
-    );
-  }
-
+  // 构建全屏雷达图弹窗
   Widget _buildFullRadarOverlay(UserModel user) {
     return GestureDetector(
       onTap: () => setState(() => _showFullRadar = false),
@@ -182,19 +227,33 @@ class _DashboardViewState extends State<DashboardView>
         color: Colors.black.withOpacity(0.6),
         child: Center(
           child: Container(
-            width: 320, height: 400,
+            width: 320,
+            height: 400,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: AppTheme.backgroundWarm,
               borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: AppTheme.accentWarmOrange.withOpacity(0.3)),
             ),
             child: Column(
               children: [
-                const Text("属性详情", style: TextStyle(color: AppTheme.textBrown, fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(
+                  "属性详情",
+                  style: TextStyle(
+                    color: AppTheme.textBrown,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
                 Expanded(child: RadarChartWidget(attributes: user.attributes)),
+                const SizedBox(height: 20),
                 TextButton(
                   onPressed: () => setState(() => _showFullRadar = false),
-                  child: const Text("返回手册", style: TextStyle(color: AppTheme.accentWarmOrange)),
+                  child: const Text(
+                    "返回手册",
+                    style: TextStyle(color: AppTheme.accentWarmOrange, fontWeight: FontWeight.bold),
+                  ),
                 )
               ],
             ),
