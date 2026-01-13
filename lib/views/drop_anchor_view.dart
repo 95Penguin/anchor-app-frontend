@@ -1,10 +1,8 @@
-// ==================== views/drop_anchor_view.dart ====================
-// 放在 lib/views/drop_anchor_view.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:anchors/providers/app_provider.dart';
-import 'package:anchors/models/anchor_model.dart'; // 必须引用这个，系统才认识 AnchorModel
-import 'package:anchors/utils/app_theme.dart';
+import '../providers/app_provider.dart';
+import '../models/anchor_model.dart';
+import '../utils/app_theme.dart';
 
 class DropAnchorView extends StatefulWidget {
   const DropAnchorView({Key? key}) : super(key: key);
@@ -16,200 +14,192 @@ class DropAnchorView extends StatefulWidget {
 class _DropAnchorViewState extends State<DropAnchorView> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
-  final _locationController = TextEditingController(text: '当前位置');
-  final List<String> _companions = [];
-  final _companionInputController = TextEditingController();
-
-  void _addCompanion() {
-    if (_companionInputController.text.trim().isNotEmpty) {
-      setState(() {
-        _companions.add(_companionInputController.text.trim());
-        _companionInputController.clear();
-      });
-    }
-  }
-
-  void _dropAnchor() {
-    if (_titleController.text.trim().isEmpty || _contentController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请填写标题和内容'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    final attributeDelta = AnchorModel.calculateAttributeDelta(_contentController.text);
-    final anchor = AnchorModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleController.text.trim(),
-      content: _contentController.text.trim(),
-      location: _locationController.text.trim(),
-      companions: List.from(_companions),
-      attributeDelta: attributeDelta,
-      createdAt: DateTime.now(),
-    );
-
-    Provider.of<AppProvider>(context, listen: false).addAnchor(anchor);
-
-    // TODO: 添加震动反馈 - HapticFeedback.heavyImpact();
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('锚点已投掷! +${attributeDelta.getTotalPoints()} 经验'),
-        backgroundColor: AppTheme.accentGreen,
-      ),
-    );
-
-    // 清空表单
-    _titleController.clear();
-    _contentController.clear();
-    _locationController.text = '当前位置';
-    setState(() => _companions.clear());
-  }
+  final _locationController = TextEditingController(text: '位置');
+  
+  String _selectedAttr = '智'; 
+  final List<String> _attrOptions = ['智', '力', '魅', '感', '毅'];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('投掷锚点', style: TextStyle(color: AppTheme.accentGreen)),
+        title: const Text('投掷锚点'),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        // 【关键】：设置与时间轴完全一致的左右边距
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          // 【关键】：强制所有子组件横向撑满
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 1. 标题
+            _buildLabel("标题"),
             TextField(
               controller: _titleController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: '标题',
-                labelStyle: const TextStyle(color: AppTheme.accentGreen),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[700]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppTheme.accentGreen),
-                ),
+              style: const TextStyle(color: AppTheme.textBrown, fontSize: 18, fontWeight: FontWeight.bold),
+              decoration: const InputDecoration(
+                hintText: "给这次记录起个名...",
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _contentController,
-              maxLines: 6,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: '记录你的感悟',
-                labelStyle: const TextStyle(color: AppTheme.accentGreen),
-                hintText: '今天发生了什么值得记录的事...',
-                hintStyle: TextStyle(color: Colors.grey[600]),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[700]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: AppTheme.accentGreen),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _locationController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: '地点',
-                labelStyle: const TextStyle(color: AppTheme.accentPurple),
-                prefixIcon: const Icon(Icons.location_on, color: AppTheme.accentPurple),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('同伴', style: TextStyle(color: AppTheme.accentPurple, fontSize: 16)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _companionInputController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: '添加同伴标签',
-                      hintStyle: TextStyle(color: Colors.grey[600]),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: _addCompanion,
-                  icon: const Icon(Icons.add_circle, color: AppTheme.accentGreen, size: 32),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: _companions
-                  .map((c) => Chip(
-                        label: Text(c),
-                        backgroundColor: AppTheme.accentPurple.withOpacity(0.2),
-                        deleteIcon: const Icon(Icons.close, size: 18),
-                        onDeleted: () => setState(() => _companions.remove(c)),
-                      ))
-                  .toList(),
             ),
             const SizedBox(height: 24),
-            // 照片占位符
-            Container(
-              height: 120,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[700]!),
+
+            // 2. 感悟内容
+            _buildLabel("感悟内容"),
+            TextField(
+              controller: _contentController,
+              maxLines: 8,
+              style: const TextStyle(color: AppTheme.textBrown, fontSize: 16, height: 1.5),
+              decoration: const InputDecoration(
+                hintText: "此刻在想什么...",
               ),
-              child: const Center(
-                child: Column(
+            ),
+            const SizedBox(height: 24),
+
+            // 3. 属性选择器
+            _buildLabel("本次成长的维度"),
+            const SizedBox(height: 8),
+            // 将选择器包裹在 Wrap 或 Row 中，使其不再受 stretch 强行拉伸
+            Align(
+              alignment: Alignment.centerLeft,
+              child: _buildAttributeSelector(),
+            ),
+            const SizedBox(height: 24),
+
+            // 4. 地点
+            _buildLabel("地点"),
+            TextField(
+              controller: _locationController,
+              style: const TextStyle(color: AppTheme.textBrown),
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.location_on_rounded, color: AppTheme.accentWarmOrange, size: 20),
+              ),
+            ),
+            const SizedBox(height: 40),
+
+            // 5. 投掷按钮
+            SizedBox(
+              height: 60,
+              child: ElevatedButton(
+                onPressed: _dropAnchor,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentWarmOrange,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.add_photo_alternate, size: 40, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text('添加照片 (占位)', style: TextStyle(color: Colors.grey)),
+                    Icon(Icons.anchor_rounded, color: Colors.white, size: 24),
+                    SizedBox(width: 12),
+                    Text(
+                      '投 掷 锚 点', 
+                      style: TextStyle(
+                        color: Colors.white, 
+                        fontSize: 18, 
+                        fontWeight: FontWeight.bold, 
+                        letterSpacing: 2
+                      )
+                    ),
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _dropAnchor,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentGreen,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text(
-                  '⚓ 投掷锚点',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
-                ),
-              ),
-            ),
+            const SizedBox(height: 100), // 底部留空，防止被遮挡
           ],
         ),
       ),
     );
   }
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _contentController.dispose();
-    _locationController.dispose();
-    _companionInputController.dispose();
-    super.dispose();
+  // 构建标签
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 10),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: AppTheme.textBrown.withOpacity(0.6), 
+          fontSize: 14, 
+          fontWeight: FontWeight.bold
+        ),
+      ),
+    );
+  }
+
+  // 紧凑型选择器
+  Widget _buildAttributeSelector() {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.textBrown.withOpacity(0.05)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: _attrOptions.map((attr) {
+          bool isSelected = _selectedAttr == attr;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedAttr = attr),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? AppTheme.accentWarmOrange : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                attr,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : AppTheme.textBrown,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _dropAnchor() {
+    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("请填写标题和内容哦"), 
+          backgroundColor: AppTheme.textBrown,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final delta = AnchorModel.calculateAttributeDelta(_contentController.text, _selectedAttr);
+
+    final anchor = AnchorModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      title: _titleController.text,
+      content: _contentController.text,
+      location: _locationController.text,
+      companions: [],
+      attributeDelta: delta,
+      createdAt: DateTime.now(),
+    );
+
+    Provider.of<AppProvider>(context, listen: false).addAnchor(anchor);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('⚓ 锚点已投掷！$_selectedAttr 属性 +5'), 
+        backgroundColor: AppTheme.accentWarmOrange,
+        behavior: SnackBarBehavior.floating,
+      )
+    );
+    
+    // 清空并收起键盘
+    _titleController.clear();
+    _contentController.clear();
+    FocusScope.of(context).unfocus();
   }
 }

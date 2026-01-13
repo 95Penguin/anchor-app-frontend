@@ -1,14 +1,12 @@
-// ==================== models/anchor_model.dart ====================
-// 放在 lib/models/anchor_model.dart
-import 'package:anchors/models/attribute_model.dart';
+import 'attribute_model.dart';
 
 class AnchorModel {
   String id;
   String title;
-  String content; // 随笔内容
+  String content;
   String location;
-  List<String> companions; // 同伴标签
-  AttributeModel attributeDelta; // 属性变化
+  List<String> companions;
+  AttributeModel attributeDelta; // 本次记录带来的属性增量
   DateTime createdAt;
   String? imagePath;
 
@@ -16,38 +14,48 @@ class AnchorModel {
     required this.id,
     required this.title,
     required this.content,
-    this.location = '未知地点',
-    this.companions = const [],
+    required this.location,
+    required this.companions,
     required this.attributeDelta,
     required this.createdAt,
     this.imagePath,
   });
 
-  static AttributeModel calculateAttributeDelta(String content) {
-    // 简单的关键词匹配算法，实际可以接入 NLP
-    AttributeModel delta = AttributeModel();
-    
-    if (content.contains('学习') || content.contains('思考') || content.contains('理解')) {
-      delta.intelligence = 5;
-    }
-    if (content.contains('运动') || content.contains('健身') || content.contains('锻炼')) {
-      delta.strength = 5;
-    }
-    if (content.contains('社交') || content.contains('交流') || content.contains('朋友')) {
-      delta.charisma = 5;
-    }
-    if (content.contains('感动') || content.contains('美') || content.contains('艺术')) {
-      delta.perception = 5;
-    }
-    if (content.contains('坚持') || content.contains('努力') || content.contains('挑战')) {
-      delta.willpower = 5;
+  // 【核心修改】：根据用户选择的属性名（智/力/魅/感/毅）来生成增量
+  static AttributeModel calculateAttributeDelta(String content, String selectedType) {
+    AttributeModel delta = AttributeModel(
+      intelligence: 0, strength: 0, charisma: 0, perception: 0, willpower: 0
+    );
+
+    // 主属性固定加 5 点
+    switch (selectedType) {
+      case '智': delta.intelligence = 5; break;
+      case '力': delta.strength = 5; break;
+      case '魅': delta.charisma = 5; break;
+      case '感': delta.perception = 5; break;
+      case '毅': delta.willpower = 5; break;
     }
 
-    // 保底增长：每次记录至少增加 3 点随机属性
-    if (delta.getTotalPoints() == 0) {
-      delta.willpower = 3;
-    }
-
+    // 只要记录了，保底全属性增加 1 点（成长的见证）
+    // 或者你可以根据文本长度加一点点经验
     return delta;
+  }
+
+  AnchorModel copyWith({
+    String? title,
+    String? content,
+    String? location,
+    List<String>? companions,
+  }) {
+    return AnchorModel(
+      id: id,
+      title: title ?? this.title,
+      content: content ?? this.content,
+      location: location ?? this.location,
+      companions: companions ?? this.companions,
+      attributeDelta: attributeDelta,
+      createdAt: createdAt,
+      imagePath: imagePath,
+    );
   }
 }
