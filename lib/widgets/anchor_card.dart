@@ -6,6 +6,7 @@ import '../models/anchor_model.dart';
 import '../providers/app_provider.dart';
 import '../utils/app_theme.dart';
 import '../views/edit_anchor_view.dart';
+import '../views/anchor_detail_view.dart';
 
 class AnchorCard extends StatelessWidget {
   final AnchorModel anchor;
@@ -26,7 +27,15 @@ class AnchorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {}, 
+      // 【修改】单击跳转到详情页
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AnchorDetailView(anchor: anchor),
+          ),
+        );
+      },
       onLongPress: () => _showActionMenu(context),
       
       child: Container(

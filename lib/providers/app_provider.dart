@@ -50,6 +50,15 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
+  // 【新增】：完整替换 anchor（用于编辑页面保存包括照片在内的所有修改）
+  void updateAnchorFull(AnchorModel updatedAnchor) {
+    int index = _anchors.indexWhere((a) => a.id == updatedAnchor.id);
+    if (index != -1) {
+      _anchors[index] = updatedAnchor;
+      notifyListeners();
+    }
+  }
+
   void updateUserProfile(String name, int age, String bio) {
     _user.name = name;
     _user.age = age;

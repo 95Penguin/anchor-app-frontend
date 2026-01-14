@@ -21,12 +21,12 @@ class _DropAnchorViewState extends State<DropAnchorView> {
   String _selectedAttr = '智'; 
   final List<String> _attrOptions = ['智', '力', '魅', '感', '毅'];
   
-  List<String> _selectedImagePaths = []; // 【修改】支持多张照片
+  List<String> _selectedImagePaths = [];
   String? _selectedMood;
   String? _selectedWeather;
   
   final ImagePicker _picker = ImagePicker();
-  static const int maxImages = 5; // 最多5张照片
+  static const int maxImages = 5;
 
   final Map<String, String> _moodOptions = {
     '开心': '😊',
@@ -54,46 +54,59 @@ class _DropAnchorViewState extends State<DropAnchorView> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 标题 + 心情天气图标
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _titleController,
-                    style: const TextStyle(color: AppTheme.textBrown, fontSize: 20, fontWeight: FontWeight.bold),
-                    decoration: InputDecoration(
-                      hintText: "给这次记录起个名...",
-                      hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3)),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
+            // 【优化】标题输入区域
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _titleController,
+                      style: const TextStyle(
+                        color: AppTheme.textBrown, 
+                        fontSize: 18, 
+                        fontWeight: FontWeight.bold
+                      ),
+                      decoration: InputDecoration(
+                        hintText: "给这次记录起个名...",
+                        hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3)),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
                     ),
                   ),
-                ),
-                _buildQuickIcon(
-                  icon: _selectedMood != null 
-                      ? Text(_moodOptions[_selectedMood]!, style: const TextStyle(fontSize: 20))
-                      : const Icon(Icons.mood_outlined, size: 20, color: AppTheme.textLightBrown),
-                  onTap: _showMoodPicker,
-                ),
-                const SizedBox(width: 8),
-                _buildQuickIcon(
-                  icon: _selectedWeather != null
-                      ? Text(_weatherOptions[_selectedWeather]!, style: const TextStyle(fontSize: 20))
-                      : const Icon(Icons.wb_sunny_outlined, size: 20, color: AppTheme.textLightBrown),
-                  onTap: _showWeatherPicker,
-                ),
-              ],
+                  _buildQuickIcon(
+                    icon: _selectedMood != null 
+                        ? Text(_moodOptions[_selectedMood]!, style: const TextStyle(fontSize: 20))
+                        : const Icon(Icons.mood_outlined, size: 20, color: AppTheme.textLightBrown),
+                    onTap: _showMoodPicker,
+                  ),
+                  const SizedBox(width: 4),
+                  _buildQuickIcon(
+                    icon: _selectedWeather != null
+                        ? Text(_weatherOptions[_selectedWeather]!, style: const TextStyle(fontSize: 20))
+                        : const Icon(Icons.wb_sunny_outlined, size: 20, color: AppTheme.textLightBrown),
+                    onTap: _showWeatherPicker,
+                  ),
+                ],
+              ),
             ),
-            Divider(color: AppTheme.textBrown.withOpacity(0.1), height: 1, thickness: 1),
             const SizedBox(height: 20),
 
-            // 【优化】多张照片网格显示
-            if (_selectedImagePaths.isNotEmpty) _buildPhotoGrid(),
-            if (_selectedImagePaths.isNotEmpty) const SizedBox(height: 16),
+            // 【优化】多张照片网格
+            if (_selectedImagePaths.isNotEmpty) ...[
+              _buildPhotoGrid(),
+              const SizedBox(height: 16),
+            ],
             
             // 添加照片按钮
             if (_selectedImagePaths.length < maxImages)
@@ -132,45 +145,104 @@ class _DropAnchorViewState extends State<DropAnchorView> {
               ),
             const SizedBox(height: 20),
 
-            // 感悟内容
-            TextField(
-              controller: _contentController,
-              maxLines: 8,
-              style: const TextStyle(color: AppTheme.textBrown, fontSize: 16, height: 1.6),
-              decoration: InputDecoration(
-                hintText: "此刻在想什么...",
-                hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3)),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
+            // 【优化】感悟内容输入区
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: TextField(
+                controller: _contentController,
+                maxLines: 8,
+                style: const TextStyle(
+                  color: AppTheme.textBrown, 
+                  fontSize: 16, 
+                  height: 1.6
+                ),
+                decoration: InputDecoration(
+                  hintText: "此刻在想什么...",
+                  hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3)),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // 【优化】属性选择 + 地点在同一行
+            // 【优化】属性 + 地点组合
             Row(
               children: [
-                // 属性选择（下拉框形式）
-                Expanded(
-                  child: _buildCompactAttributeSelector(),
+                // 属性选择
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.accentWarmOrange.withOpacity(0.2),
+                        AppTheme.accentWarmOrange.withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.auto_awesome, color: AppTheme.accentWarmOrange, size: 18),
+                      const SizedBox(width: 6),
+                      DropdownButton<String>(
+                        value: _selectedAttr,
+                        underline: const SizedBox(),
+                        dropdownColor: AppTheme.paperColor,
+                        icon: const Icon(Icons.arrow_drop_down, color: AppTheme.accentWarmOrange, size: 20),
+                        style: const TextStyle(
+                          color: AppTheme.textBrown,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        items: _attrOptions.map((attr) {
+                          return DropdownMenuItem(
+                            value: attr,
+                            child: Text(attr),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _selectedAttr = value);
+                          }
+                        },
+                      ),
+                      Text(
+                        ' +5',
+                        style: TextStyle(
+                          color: AppTheme.accentWarmOrange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 12),
                 // 地点输入
                 Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: _locationController,
-                    style: const TextStyle(color: AppTheme.textBrown, fontSize: 14),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.location_on_rounded, color: AppTheme.accentWarmOrange, size: 18),
-                      hintText: '记录地点',
-                      hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3), fontSize: 13),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.5),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: TextField(
+                      controller: _locationController,
+                      style: const TextStyle(color: AppTheme.textBrown, fontSize: 14),
+                      decoration: InputDecoration(
+                        icon: const Icon(Icons.location_on_rounded, color: AppTheme.accentWarmOrange, size: 18),
+                        hintText: '记录地点',
+                        hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3), fontSize: 13),
+                        border: InputBorder.none,
+                        isDense: true,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     ),
                   ),
                 ),
@@ -185,7 +257,8 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                 onPressed: _dropAnchor,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentWarmOrange,
-                  elevation: 0,
+                  elevation: 4,
+                  shadowColor: AppTheme.accentWarmOrange.withOpacity(0.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 child: const Row(
@@ -213,7 +286,6 @@ class _DropAnchorViewState extends State<DropAnchorView> {
     );
   }
 
-  // 【新增】照片网格显示
   Widget _buildPhotoGrid() {
     return SizedBox(
       height: 100,
@@ -257,54 +329,6 @@ class _DropAnchorViewState extends State<DropAnchorView> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  // 【优化】紧凑型属性选择器
-  Widget _buildCompactAttributeSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppTheme.accentWarmOrange.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.auto_awesome, color: AppTheme.accentWarmOrange, size: 18),
-          const SizedBox(width: 8),
-          DropdownButton<String>(
-            value: _selectedAttr,
-            underline: const SizedBox(),
-            dropdownColor: AppTheme.paperColor,
-            icon: const Icon(Icons.arrow_drop_down, color: AppTheme.accentWarmOrange),
-            style: const TextStyle(
-              color: AppTheme.textBrown,
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
-            items: _attrOptions.map((attr) {
-              return DropdownMenuItem(
-                value: attr,
-                child: Text(attr),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() => _selectedAttr = value);
-              }
-            },
-          ),
-          Text(
-            ' +5',
-            style: TextStyle(
-              color: AppTheme.accentWarmOrange.withOpacity(0.7),
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
       ),
     );
   }
