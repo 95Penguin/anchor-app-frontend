@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/app_provider.dart';
 import '../models/anchor_model.dart';
 import '../utils/app_theme.dart';
@@ -18,6 +20,31 @@ class _DropAnchorViewState extends State<DropAnchorView> {
   
   String _selectedAttr = '智'; 
   final List<String> _attrOptions = ['智', '力', '魅', '感', '毅'];
+  
+  List<String> _selectedImagePaths = []; // 【修改】支持多张照片
+  String? _selectedMood;
+  String? _selectedWeather;
+  
+  final ImagePicker _picker = ImagePicker();
+  static const int maxImages = 5; // 最多5张照片
+
+  final Map<String, String> _moodOptions = {
+    '开心': '😊',
+    '平静': '😌',
+    '激动': '🤩',
+    '难过': '😢',
+    '焦虑': '😰',
+    '疲惫': '😴',
+  };
+
+  final Map<String, String> _weatherOptions = {
+    '晴天': '☀️',
+    '多云': '⛅',
+    '阴天': '☁️',
+    '雨天': '🌧️',
+    '雪天': '❄️',
+    '雾天': '🌫️',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -27,76 +54,150 @@ class _DropAnchorViewState extends State<DropAnchorView> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        // 【关键】：设置与时间轴完全一致的左右边距
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
-          // 【关键】：强制所有子组件横向撑满
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. 标题
-            _buildLabel("标题"),
-            TextField(
-              controller: _titleController,
-              style: const TextStyle(color: AppTheme.textBrown, fontSize: 18, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                hintText: "给这次记录起个名...",
-              ),
+            // 标题 + 心情天气图标
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _titleController,
+                    style: const TextStyle(color: AppTheme.textBrown, fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: "给这次记录起个名...",
+                      hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3)),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+                _buildQuickIcon(
+                  icon: _selectedMood != null 
+                      ? Text(_moodOptions[_selectedMood]!, style: const TextStyle(fontSize: 20))
+                      : const Icon(Icons.mood_outlined, size: 20, color: AppTheme.textLightBrown),
+                  onTap: _showMoodPicker,
+                ),
+                const SizedBox(width: 8),
+                _buildQuickIcon(
+                  icon: _selectedWeather != null
+                      ? Text(_weatherOptions[_selectedWeather]!, style: const TextStyle(fontSize: 20))
+                      : const Icon(Icons.wb_sunny_outlined, size: 20, color: AppTheme.textLightBrown),
+                  onTap: _showWeatherPicker,
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
+            Divider(color: AppTheme.textBrown.withOpacity(0.1), height: 1, thickness: 1),
+            const SizedBox(height: 20),
 
-            // 2. 感悟内容
-            _buildLabel("感悟内容"),
+            // 【优化】多张照片网格显示
+            if (_selectedImagePaths.isNotEmpty) _buildPhotoGrid(),
+            if (_selectedImagePaths.isNotEmpty) const SizedBox(height: 16),
+            
+            // 添加照片按钮
+            if (_selectedImagePaths.length < maxImages)
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: AppTheme.textBrown.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.textBrown.withOpacity(0.15),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add_photo_alternate_outlined, 
+                        size: 36, 
+                        color: AppTheme.textBrown.withOpacity(0.4)
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _selectedImagePaths.isEmpty 
+                            ? '添加照片（可选）'
+                            : '继续添加 (${_selectedImagePaths.length}/$maxImages)',
+                        style: TextStyle(
+                          color: AppTheme.textBrown.withOpacity(0.5),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 20),
+
+            // 感悟内容
             TextField(
               controller: _contentController,
               maxLines: 8,
-              style: const TextStyle(color: AppTheme.textBrown, fontSize: 16, height: 1.5),
-              decoration: const InputDecoration(
+              style: const TextStyle(color: AppTheme.textBrown, fontSize: 16, height: 1.6),
+              decoration: InputDecoration(
                 hintText: "此刻在想什么...",
+                hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3)),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
               ),
             ),
             const SizedBox(height: 24),
 
-            // 3. 属性选择器
-            _buildLabel("本次成长的维度"),
-            const SizedBox(height: 8),
-            // 将选择器包裹在 Wrap 或 Row 中，使其不再受 stretch 强行拉伸
-            Align(
-              alignment: Alignment.centerLeft,
-              child: _buildAttributeSelector(),
-            ),
-            const SizedBox(height: 24),
-
-            // 4. 地点
-            _buildLabel("地点"),
-            TextField(
-              controller: _locationController,
-              style: const TextStyle(color: AppTheme.textBrown),
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.location_on_rounded, color: AppTheme.accentWarmOrange, size: 20),
-              ),
+            // 【优化】属性选择 + 地点在同一行
+            Row(
+              children: [
+                // 属性选择（下拉框形式）
+                Expanded(
+                  child: _buildCompactAttributeSelector(),
+                ),
+                const SizedBox(width: 12),
+                // 地点输入
+                Expanded(
+                  flex: 2,
+                  child: TextField(
+                    controller: _locationController,
+                    style: const TextStyle(color: AppTheme.textBrown, fontSize: 14),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.location_on_rounded, color: AppTheme.accentWarmOrange, size: 18),
+                      hintText: '记录地点',
+                      hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3), fontSize: 13),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.5),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 40),
 
-            // 5. 投掷按钮
+            // 投掷按钮
             SizedBox(
-              height: 60,
+              height: 56,
               child: ElevatedButton(
                 onPressed: _dropAnchor,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentWarmOrange,
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.anchor_rounded, color: Colors.white, size: 24),
+                    Icon(Icons.anchor_rounded, color: Colors.white, size: 22),
                     SizedBox(width: 12),
                     Text(
                       '投 掷 锚 点', 
                       style: TextStyle(
                         color: Colors.white, 
-                        fontSize: 18, 
+                        fontSize: 17, 
                         fontWeight: FontWeight.bold, 
                         letterSpacing: 2
                       )
@@ -105,60 +206,318 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                 ),
               ),
             ),
-            const SizedBox(height: 100), // 底部留空，防止被遮挡
+            const SizedBox(height: 60),
           ],
         ),
       ),
     );
   }
 
-  // 构建标签
-  Widget _buildLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 10),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: AppTheme.textBrown.withOpacity(0.6), 
-          fontSize: 14, 
-          fontWeight: FontWeight.bold
+  // 【新增】照片网格显示
+  Widget _buildPhotoGrid() {
+    return SizedBox(
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _selectedImagePaths.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(_selectedImagePaths[index]),
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedImagePaths.removeAt(index);
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, color: Colors.white, size: 16),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // 【优化】紧凑型属性选择器
+  Widget _buildCompactAttributeSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.accentWarmOrange.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.auto_awesome, color: AppTheme.accentWarmOrange, size: 18),
+          const SizedBox(width: 8),
+          DropdownButton<String>(
+            value: _selectedAttr,
+            underline: const SizedBox(),
+            dropdownColor: AppTheme.paperColor,
+            icon: const Icon(Icons.arrow_drop_down, color: AppTheme.accentWarmOrange),
+            style: const TextStyle(
+              color: AppTheme.textBrown,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+            items: _attrOptions.map((attr) {
+              return DropdownMenuItem(
+                value: attr,
+                child: Text(attr),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedAttr = value);
+              }
+            },
+          ),
+          Text(
+            ' +5',
+            style: TextStyle(
+              color: AppTheme.accentWarmOrange.withOpacity(0.7),
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickIcon({required Widget icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        child: icon,
+      ),
+    );
+  }
+
+  void _showMoodPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.backgroundWarm,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('选择心情', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
+                if (_selectedMood != null)
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _selectedMood = null);
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('清除', style: TextStyle(color: Colors.red)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: _moodOptions.entries.map((entry) {
+                bool isSelected = _selectedMood == entry.key;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedMood = entry.key);
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.accentWarmOrange : Colors.white.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.accentWarmOrange : AppTheme.textBrown.withOpacity(0.2),
+                        width: 2,
+                      ),
+                    ),
+                    child: Text(
+                      '${entry.value} ${entry.key}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : AppTheme.textBrown,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 30),
+          ],
         ),
       ),
     );
   }
 
-  // 紧凑型选择器
-  Widget _buildAttributeSelector() {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.textBrown.withOpacity(0.05)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: _attrOptions.map((attr) {
-          bool isSelected = _selectedAttr == attr;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedAttr = attr),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                color: isSelected ? AppTheme.accentWarmOrange : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                attr,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : AppTheme.textBrown,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+  void _showWeatherPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.backgroundWarm,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('选择天气', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
+                if (_selectedWeather != null)
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _selectedWeather = null);
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('清除', style: TextStyle(color: Colors.red)),
+                  ),
+              ],
             ),
-          );
-        }).toList(),
+            const SizedBox(height: 20),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: _weatherOptions.entries.map((entry) {
+                bool isSelected = _selectedWeather == entry.key;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedWeather = entry.key);
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.accentWarmOrange : Colors.white.withOpacity(0.6),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.accentWarmOrange : AppTheme.textBrown.withOpacity(0.2),
+                        width: 2,
+                      ),
+                    ),
+                    child: Text(
+                      '${entry.value} ${entry.key}',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : AppTheme.textBrown,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 30),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage() async {
+    if (_selectedImagePaths.length >= maxImages) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('最多只能添加 $maxImages 张照片'),
+          backgroundColor: AppTheme.textBrown,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.backgroundWarm,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, 
+              height: 4, 
+              decoration: BoxDecoration(
+                color: Colors.grey[300], 
+                borderRadius: BorderRadius.circular(2)
+              )
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Colors.blue,
+                child: Icon(Icons.camera_alt, color: Colors.white),
+              ),
+              title: const Text('拍照', style: TextStyle(color: AppTheme.textBrown)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+                if (photo != null) {
+                  setState(() => _selectedImagePaths.add(photo.path));
+                }
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Colors.green,
+                child: Icon(Icons.photo_library, color: Colors.white),
+              ),
+              title: const Text('从相册选择', style: TextStyle(color: AppTheme.textBrown)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                if (image != null) {
+                  setState(() => _selectedImagePaths.add(image.path));
+                }
+              },
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
@@ -185,6 +544,9 @@ class _DropAnchorViewState extends State<DropAnchorView> {
       companions: [],
       attributeDelta: delta,
       createdAt: DateTime.now(),
+      imagePaths: _selectedImagePaths,
+      mood: _selectedMood,
+      weather: _selectedWeather,
     );
 
     Provider.of<AppProvider>(context, listen: false).addAnchor(anchor);
@@ -194,12 +556,17 @@ class _DropAnchorViewState extends State<DropAnchorView> {
         content: Text('⚓ 锚点已投掷！$_selectedAttr 属性 +5'), 
         backgroundColor: AppTheme.accentWarmOrange,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
       )
     );
     
-    // 清空并收起键盘
     _titleController.clear();
     _contentController.clear();
+    setState(() {
+      _selectedImagePaths.clear();
+      _selectedMood = null;
+      _selectedWeather = null;
+    });
     FocusScope.of(context).unfocus();
   }
 }

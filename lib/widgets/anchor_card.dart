@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -12,13 +13,20 @@ class AnchorCard extends StatelessWidget {
 
   const AnchorCard({Key? key, required this.anchor, this.showFull = false}) : super(key: key);
 
+  static const Map<String, String> _moodEmojis = {
+    '开心': '😊', '平静': '😌', '激动': '🤩',
+    '难过': '😢', '焦虑': '😰', '疲惫': '😴',
+  };
+  
+  static const Map<String, String> _weatherEmojis = {
+    '晴天': '☀️', '多云': '⛅', '阴天': '☁️',
+    '雨天': '🌧️', '雪天': '❄️', '雾天': '🌫️',
+  };
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // 单击：可以设为查看大图或详情（目前留空或进入编辑）
       onTap: () {}, 
-      
-      // 【核心修改】：长按弹出操作菜单
       onLongPress: () => _showActionMenu(context),
       
       child: Container(
@@ -39,15 +47,16 @@ class AnchorCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildTopVisual(),
+              // 【优化】照片展示区域
+              _buildPhotoSection(),
+              
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 标题与时间行
+                    // 标题行
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
                           child: Text(
@@ -61,17 +70,32 @@ class AnchorCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // 【修复】：重新显示时间
-                        Text(
-                          DateFormat('MM/dd HH:mm').format(anchor.createdAt),
-                          style: TextStyle(
-                            color: AppTheme.textLightBrown.withOpacity(0.6),
-                            fontSize: 11,
-                          ),
-                        ),
+                        const SizedBox(width: 8),
+                        // 心情和天气标签
+                        if (anchor.weather != null)
+                          Text(_weatherEmojis[anchor.weather!] ?? '', style: const TextStyle(fontSize: 14)),
+                        if (anchor.weather != null && anchor.mood != null)
+                          const SizedBox(width: 4),
+                        if (anchor.mood != null)
+                          Text(_moodEmojis[anchor.mood!] ?? '', style: const TextStyle(fontSize: 14)),
                       ],
                     ),
+                    
+                    // 时间
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        DateFormat('MM/dd HH:mm').format(anchor.createdAt),
+                        style: TextStyle(
+                          color: AppTheme.textLightBrown.withOpacity(0.6),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    
                     const SizedBox(height: 8),
+                    
+                    // 内容
                     Text(
                       anchor.content,
                       maxLines: showFull ? null : 3,
@@ -81,7 +105,10 @@ class AnchorCard extends StatelessWidget {
                         height: 1.5,
                       ),
                     ),
+                    
                     const SizedBox(height: 12),
+                    
+                    // 地点和经验值
                     Row(
                       children: [
                         const Icon(Icons.location_on_rounded, size: 12, color: AppTheme.accentWarmOrange),
@@ -106,11 +133,99 @@ class AnchorCard extends StatelessWidget {
     );
   }
 
-  // --- 弹出操作菜单 ---
+  // 【优化】照片展示区域
+  Widget _buildPhotoSection() {
+    if (anchor.imagePaths.isEmpty) {
+      // 没有照片时显示装饰条
+      return Container(
+        height: 4,
+        width: double.infinity,
+        color: AppTheme.accentWarmOrange.withOpacity(0.8),
+      );
+    }
+
+    // 列表模式：显示第一张照片
+    if (!showFull) {
+      return Container(
+        height: 140,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.file(
+              File(anchor.imagePaths.first),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  color: AppTheme.accentWarmOrange.withOpacity(0.1),
+                  child: const Center(
+                    child: Icon(Icons.broken_image, color: AppTheme.textLightBrown, size: 40),
+                  ),
+                );
+              },
+            ),
+            // 如果有多张照片，显示数量标识
+            if (anchor.imagePaths.length > 1)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.collections, color: Colors.white, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${anchor.imagePaths.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    // 详情模式：显示多张照片横向滚动
+    return Container(
+      height: 200,
+      child: anchor.imagePaths.length == 1
+          ? Image.file(
+              File(anchor.imagePaths.first),
+              fit: BoxFit.cover,
+              width: double.infinity,
+            )
+          : ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: anchor.imagePaths.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: EdgeInsets.only(
+                    left: index == 0 ? 0 : 4,
+                    right: index == anchor.imagePaths.length - 1 ? 0 : 4,
+                  ),
+                  child: Image.file(
+                    File(anchor.imagePaths[index]),
+                    fit: BoxFit.cover,
+                    width: 200,
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
   void _showActionMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent, // 设置背景透明以实现自定义圆角
+      backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
         decoration: const BoxDecoration(
           color: AppTheme.backgroundWarm,
@@ -120,17 +235,15 @@ class AnchorCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 顶部的指示条
             Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 20),
             
             const Text("锚点操作", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textBrown)),
             const SizedBox(height: 10),
             
-            // 修改选项
             ListTile(
-              leading: CircleAvatar( // 【注意】：这里去掉了 const
-                backgroundColor: Colors.blue.withOpacity(0.1), // 使用标准蓝色并加透明度
+              leading: CircleAvatar(
+                backgroundColor: Colors.blue.withOpacity(0.1),
                 child: const Icon(Icons.edit_rounded, color: Colors.blue),
               ),
               title: const Text("修改这段记录", style: TextStyle(color: AppTheme.textBrown)),
@@ -140,10 +253,9 @@ class AnchorCard extends StatelessWidget {
               },
             ),
             
-            // 删除选项
             ListTile(
-              leading: CircleAvatar( // 【注意】：这里去掉了 const
-                backgroundColor: Colors.red.withOpacity(0.1), // 使用标准红色并加透明度
+              leading: CircleAvatar(
+                backgroundColor: Colors.red.withOpacity(0.1),
                 child: const Icon(Icons.delete_sweep_rounded, color: Colors.red),
               ),
               title: const Text("抹除这段回忆", style: TextStyle(color: Colors.red)),
@@ -178,15 +290,6 @@ class AnchorCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTopVisual() {
-    bool hasImage = anchor.imagePath != null;
-    return Container(
-      height: hasImage ? (showFull ? 120 : 80) : 4,
-      width: double.infinity,
-      color: AppTheme.accentWarmOrange.withOpacity(hasImage ? 0.05 : 0.8),
     );
   }
 

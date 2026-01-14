@@ -6,9 +6,11 @@ class AnchorModel {
   String content;
   String location;
   List<String> companions;
-  AttributeModel attributeDelta; // 本次记录带来的属性增量
+  AttributeModel attributeDelta;
   DateTime createdAt;
-  String? imagePath;
+  List<String> imagePaths; // 【修改】改为列表支持多张照片
+  String? mood;
+  String? weather;
 
   AnchorModel({
     required this.id,
@@ -18,16 +20,19 @@ class AnchorModel {
     required this.companions,
     required this.attributeDelta,
     required this.createdAt,
-    this.imagePath,
-  });
+    List<String>? imagePaths, // 【修改】可选的图片列表
+    this.mood,
+    this.weather,
+  }) : imagePaths = imagePaths ?? [];
 
-  // 【核心修改】：根据用户选择的属性名（智/力/魅/感/毅）来生成增量
+  // 兼容旧版本的 imagePath 属性
+  String? get imagePath => imagePaths.isNotEmpty ? imagePaths.first : null;
+
   static AttributeModel calculateAttributeDelta(String content, String selectedType) {
     AttributeModel delta = AttributeModel(
       intelligence: 0, strength: 0, charisma: 0, perception: 0, willpower: 0
     );
 
-    // 主属性固定加 5 点
     switch (selectedType) {
       case '智': delta.intelligence = 5; break;
       case '力': delta.strength = 5; break;
@@ -36,8 +41,6 @@ class AnchorModel {
       case '毅': delta.willpower = 5; break;
     }
 
-    // 只要记录了，保底全属性增加 1 点（成长的见证）
-    // 或者你可以根据文本长度加一点点经验
     return delta;
   }
 
@@ -46,6 +49,8 @@ class AnchorModel {
     String? content,
     String? location,
     List<String>? companions,
+    String? mood,
+    String? weather,
   }) {
     return AnchorModel(
       id: id,
@@ -55,7 +60,9 @@ class AnchorModel {
       companions: companions ?? this.companions,
       attributeDelta: attributeDelta,
       createdAt: createdAt,
-      imagePath: imagePath,
+      imagePaths: imagePaths,
+      mood: mood ?? this.mood,
+      weather: weather ?? this.weather,
     );
   }
 }

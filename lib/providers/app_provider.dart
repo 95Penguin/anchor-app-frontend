@@ -23,20 +23,28 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 【删】：按ID删除
+  // 删
   void deleteAnchor(String id) {
     _anchors.removeWhere((a) => a.id == id);
     notifyListeners();
   }
 
-  // 【改】：按ID更新内容
-  void updateAnchor(String id, String title, String content, String location) {
+  // 【修改】：支持更新心情和天气
+  void updateAnchor(
+    String id, 
+    String title, 
+    String content, 
+    String location,
+    {String? mood, String? weather}
+  ) {
     int index = _anchors.indexWhere((a) => a.id == id);
     if (index != -1) {
       _anchors[index] = _anchors[index].copyWith(
         title: title,
         content: content,
         location: location,
+        mood: mood,
+        weather: weather,
       );
       notifyListeners();
     }

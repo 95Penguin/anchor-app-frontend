@@ -33,6 +33,7 @@ dependencies:
   provider: ^6.0.0
   fl_chart: ^0.66.0  # 用于画雷达图
   intl: ^0.18.0      # 用于格式化时间
+  image_picker: ^1.0.4  # 新增：用于选择照片
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
