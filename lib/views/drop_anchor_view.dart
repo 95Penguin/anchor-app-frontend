@@ -1,10 +1,14 @@
+// lib/views/drop_anchor_view.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_vibrate/flutter_vibrate.dart';
 import '../providers/app_provider.dart';
 import '../models/anchor_model.dart';
 import '../utils/app_theme.dart';
+import '../services/image_helper.dart';
 
 class DropAnchorView extends StatefulWidget {
   const DropAnchorView({Key? key}) : super(key: key);
@@ -13,7 +17,7 @@ class DropAnchorView extends StatefulWidget {
   State<DropAnchorView> createState() => _DropAnchorViewState();
 }
 
-class _DropAnchorViewState extends State<DropAnchorView> {
+class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProviderStateMixin {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _locationController = TextEditingController(text: '位置');
@@ -24,27 +28,40 @@ class _DropAnchorViewState extends State<DropAnchorView> {
   List<String> _selectedImagePaths = [];
   String? _selectedMood;
   String? _selectedWeather;
+  bool _isLoading = false;
+  
+  late AnimationController _fabController;
   
   final ImagePicker _picker = ImagePicker();
   static const int maxImages = 5;
 
   final Map<String, String> _moodOptions = {
-    '开心': '😊',
-    '平静': '😌',
-    '激动': '🤩',
-    '难过': '😢',
-    '焦虑': '😰',
-    '疲惫': '😴',
+    '开心': '😊', '平静': '😌', '激动': '🤩',
+    '难过': '😢', '焦虑': '😰', '疲惫': '😴',
   };
 
   final Map<String, String> _weatherOptions = {
-    '晴天': '☀️',
-    '多云': '⛅',
-    '阴天': '☁️',
-    '雨天': '🌧️',
-    '雪天': '❄️',
-    '雾天': '🌫️',
+    '晴天': '☀️', '多云': '⛅', '阴天': '☁️',
+    '雨天': '🌧️', '雪天': '❄️', '雾天': '🌫️',
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _fabController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+  }
+
+  @override
+  void dispose() {
+    _fabController.dispose();
+    _titleController.dispose();
+    _contentController.dispose();
+    _locationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +75,6 @@ class _DropAnchorViewState extends State<DropAnchorView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 【优化】标题输入区域
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -102,13 +118,11 @@ class _DropAnchorViewState extends State<DropAnchorView> {
             ),
             const SizedBox(height: 20),
 
-            // 【优化】多张照片网格
             if (_selectedImagePaths.isNotEmpty) ...[
               _buildPhotoGrid(),
               const SizedBox(height: 16),
             ],
             
-            // 添加照片按钮
             if (_selectedImagePaths.length < maxImages)
               GestureDetector(
                 onTap: _pickImage,
@@ -132,7 +146,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                       const SizedBox(height: 8),
                       Text(
                         _selectedImagePaths.isEmpty 
-                            ? '添加照片（可选）'
+                            ? '添加照片(可选)'
                             : '继续添加 (${_selectedImagePaths.length}/$maxImages)',
                         style: TextStyle(
                           color: AppTheme.textBrown.withOpacity(0.5),
@@ -145,7 +159,6 @@ class _DropAnchorViewState extends State<DropAnchorView> {
               ),
             const SizedBox(height: 20),
 
-            // 【优化】感悟内容输入区
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -171,10 +184,10 @@ class _DropAnchorViewState extends State<DropAnchorView> {
             ),
             const SizedBox(height: 20),
 
-            // 【优化】属性 + 地点组合
+            // 替换原来的 Row 区域（大约在第 280 行附近）
             Row(
               children: [
-                // 属性选择
+                // 属性选择器
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
@@ -213,7 +226,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                           }
                         },
                       ),
-                      Text(
+                      const Text(
                         ' +5',
                         style: TextStyle(
                           color: AppTheme.accentWarmOrange,
@@ -225,24 +238,47 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // 地点输入
+                // 地点输入框 - 优化版
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: TextField(
-                      controller: _locationController,
-                      style: const TextStyle(color: AppTheme.textBrown, fontSize: 14),
-                      decoration: InputDecoration(
-                        icon: const Icon(Icons.location_on_rounded, color: AppTheme.accentWarmOrange, size: 18),
-                        hintText: '记录地点',
-                        hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3), fontSize: 13),
-                        border: InputBorder.none,
-                        isDense: true,
+                      border: Border.all(
+                        color: AppTheme.textBrown.withOpacity(0.1),
+                        width: 1,
                       ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_rounded, 
+                          color: AppTheme.accentWarmOrange, 
+                          size: 18
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _locationController,
+                            style: const TextStyle(
+                              color: AppTheme.textBrown, 
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: '记录地点',
+                              hintStyle: TextStyle(
+                                color: AppTheme.textBrown.withOpacity(0.3), 
+                                fontSize: 13
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -250,33 +286,34 @@ class _DropAnchorViewState extends State<DropAnchorView> {
             ),
             const SizedBox(height: 40),
 
-            // 投掷按钮
             SizedBox(
               height: 56,
               child: ElevatedButton(
-                onPressed: _dropAnchor,
+                onPressed: _isLoading ? null : _dropAnchor,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentWarmOrange,
                   elevation: 4,
                   shadowColor: AppTheme.accentWarmOrange.withOpacity(0.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.anchor_rounded, color: Colors.white, size: 22),
-                    SizedBox(width: 12),
-                    Text(
-                      '投 掷 锚 点', 
-                      style: TextStyle(
-                        color: Colors.white, 
-                        fontSize: 17, 
-                        fontWeight: FontWeight.bold, 
-                        letterSpacing: 2
-                      )
-                    ),
-                  ],
-                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.anchor_rounded, color: Colors.white, size: 22),
+                          SizedBox(width: 12),
+                          Text(
+                            '投 掷 锚 点', 
+                            style: TextStyle(
+                              color: Colors.white, 
+                              fontSize: 17, 
+                              fontWeight: FontWeight.bold, 
+                              letterSpacing: 2
+                            )
+                          ),
+                        ],
+                      ),
               ),
             ),
             const SizedBox(height: 60),
@@ -345,6 +382,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
   }
 
   void _showMoodPicker() {
+    _triggerHapticFeedback();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -379,6 +417,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                 bool isSelected = _selectedMood == entry.key;
                 return GestureDetector(
                   onTap: () {
+                    _triggerHapticFeedback();
                     setState(() => _selectedMood = entry.key);
                     Navigator.pop(ctx);
                   },
@@ -412,6 +451,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
   }
 
   void _showWeatherPicker() {
+    _triggerHapticFeedback();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -446,6 +486,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                 bool isSelected = _selectedWeather == entry.key;
                 return GestureDetector(
                   onTap: () {
+                    _triggerHapticFeedback();
                     setState(() => _selectedWeather = entry.key);
                     Navigator.pop(ctx);
                   },
@@ -479,6 +520,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
   }
 
   Future<void> _pickImage() async {
+    _triggerHapticFeedback();
     if (_selectedImagePaths.length >= maxImages) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -521,7 +563,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                 Navigator.pop(ctx);
                 final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
                 if (photo != null) {
-                  setState(() => _selectedImagePaths.add(photo.path));
+                  await _processImage(photo.path);
                 }
               },
             ),
@@ -535,7 +577,7 @@ class _DropAnchorViewState extends State<DropAnchorView> {
                 Navigator.pop(ctx);
                 final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
                 if (image != null) {
-                  setState(() => _selectedImagePaths.add(image.path));
+                  await _processImage(image.path);
                 }
               },
             ),
@@ -546,7 +588,20 @@ class _DropAnchorViewState extends State<DropAnchorView> {
     );
   }
 
-  void _dropAnchor() {
+  Future<void> _processImage(String imagePath) async {
+    setState(() => _isLoading = true);
+    
+    final compressedPath = await ImageHelper.compressAndSaveImage(imagePath);
+    
+    setState(() {
+      _isLoading = false;
+      if (compressedPath != null) {
+        _selectedImagePaths.add(compressedPath);
+      }
+    });
+  }
+
+  Future<void> _dropAnchor() async {
     if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -557,6 +612,9 @@ class _DropAnchorViewState extends State<DropAnchorView> {
       );
       return;
     }
+
+    setState(() => _isLoading = true);
+    _triggerHapticFeedback();
 
     final delta = AnchorModel.calculateAttributeDelta(_contentController.text, _selectedAttr);
 
@@ -573,16 +631,23 @@ class _DropAnchorViewState extends State<DropAnchorView> {
       weather: _selectedWeather,
     );
 
-    Provider.of<AppProvider>(context, listen: false).addAnchor(anchor);
+    await Provider.of<AppProvider>(context, listen: false).addAnchor(anchor);
+    
+    setState(() => _isLoading = false);
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('⚓ 锚点已投掷！$_selectedAttr 属性 +5'), 
+        content: Text('⚓ 锚点已投掷!$_selectedAttr 属性 +5'), 
         backgroundColor: AppTheme.accentWarmOrange,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       )
     );
+    
+    // 跳转到时间轴
+    if (mounted) {
+      DefaultTabController.of(context).animateTo(1);
+    }
     
     _titleController.clear();
     _contentController.clear();
@@ -592,5 +657,23 @@ class _DropAnchorViewState extends State<DropAnchorView> {
       _selectedWeather = null;
     });
     FocusScope.of(context).unfocus();
+  }
+
+  void _triggerHapticFeedback() {
+    Vibrate.feedback(FeedbackType.light);
+  }
+}
+
+// 在 drop_anchor_view.dart 文件末尾，修改 _triggerHapticFeedback 方法
+
+void _triggerHapticFeedback() {
+  try {
+    // 只在移动端触发振动
+    if (Platform.isAndroid || Platform.isIOS) {
+      Vibrate.feedback(FeedbackType.light);
+    }
+  } catch (e) {
+    // 忽略振动错误
+    print('振动功能不可用: $e');
   }
 }

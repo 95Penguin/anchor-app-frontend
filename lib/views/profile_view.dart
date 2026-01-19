@@ -1,8 +1,11 @@
+// lib/views/profile_view.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../utils/app_theme.dart';
 import '../models/user_model.dart';
+import 'settings_view.dart';
+import 'statistics_view.dart';
 
 class ProfileView extends StatefulWidget {
   const ProfileView({Key? key}) : super(key: key);
@@ -20,7 +23,6 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   void initState() {
     super.initState();
-    // 初始化数据
     final user = Provider.of<AppProvider>(context, listen: false).user;
     _nameController = TextEditingController(text: user.name);
     _ageController = TextEditingController(text: user.age.toString());
@@ -47,11 +49,30 @@ class _ProfileViewState extends State<ProfileView> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AppProvider>(context).user;
+    final stats = Provider.of<AppProvider>(context).getStatistics();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('角色档案'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart, color: AppTheme.accentWarmOrange, size: 28),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const StatisticsView()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: AppTheme.accentWarmOrange, size: 28),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsView()),
+              );
+            },
+          ),
           IconButton(
             icon: Icon(
               _isEditing ? Icons.check_circle : Icons.edit_note,
@@ -64,17 +85,15 @@ class _ProfileViewState extends State<ProfileView> {
         ],
       ),
       body: SingleChildScrollView(
-        // 设置水平间距，确保不贴边，与时间轴保持一致
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Column(
-          // 【核心修复】：stretch 强制子组件（卡片）占满屏幕宽度
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. 头像区域 (包裹在 Center 里防止被横向拉伸)
-            Center(child: _buildAvatarSection(user)),
+            // 头像区域
+            Center(child: _buildAvatarSection(user, stats)),
             const SizedBox(height: 40),
 
-            // 2. 基础设定
+            // 基础设定
             _buildSectionTitle("基础设定"),
             const SizedBox(height: 12),
             Card(
@@ -93,7 +112,7 @@ class _ProfileViewState extends State<ProfileView> {
             ),
             const SizedBox(height: 32),
 
-            // 3. 数值面板
+            // 数值面板
             _buildSectionTitle("数值面板"),
             const SizedBox(height: 12),
             Card(
@@ -107,7 +126,13 @@ class _ProfileViewState extends State<ProfileView> {
                         children: [
                           SizedBox(
                             width: 35,
-                            child: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
+                            child: Text(
+                              entry.key,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textBrown,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -122,7 +147,13 @@ class _ProfileViewState extends State<ProfileView> {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          Text("${entry.value}", style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.accentWarmOrange)),
+                          Text(
+                            "${entry.value}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.accentWarmOrange,
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -132,7 +163,43 @@ class _ProfileViewState extends State<ProfileView> {
             ),
             const SizedBox(height: 32),
 
-            // 4. 其他信息 (这些磁贴也会跟随 Column 自动撑开)
+            // 成就展示
+            _buildSectionTitle("成就徽章"),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _buildAchievementBadge(
+                      '新手启航',
+                      stats['totalAnchors'] >= 1,
+                      Icons.sailing,
+                    ),
+                    _buildAchievementBadge(
+                      '持之以恒',
+                      stats['currentStreak'] >= 7,
+                      Icons.local_fire_department,
+                    ),
+                    _buildAchievementBadge(
+                      '经验丰富',
+                      stats['totalAnchors'] >= 50,
+                      Icons.star,
+                    ),
+                    _buildAchievementBadge(
+                      '大师级',
+                      user.level >= 10,
+                      Icons.military_tech,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // 其他信息
             _buildSimpleTile(Icons.info_outline, "版本信息", "Anchors v1.0.0"),
             const SizedBox(height: 12),
             _buildSimpleTile(Icons.help_outline, "使用帮助", "每一次投掷都是一次成长"),
@@ -144,28 +211,47 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildAvatarSection(UserModel user) {
+  Widget _buildAvatarSection(UserModel user, Map<String, dynamic> stats) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppTheme.accentWarmOrange.withOpacity(0.3), width: 2),
+            border: Border.all(
+              color: AppTheme.accentWarmOrange.withOpacity(0.3),
+              width: 2,
+            ),
           ),
           child: CircleAvatar(
             radius: 55,
             backgroundColor: AppTheme.accentWarmOrange.withOpacity(0.1),
             child: Text(
               user.name.isNotEmpty ? user.name[0] : "旅",
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: AppTheme.textBrown),
+              style: const TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textBrown,
+              ),
             ),
           ),
         ),
         const SizedBox(height: 12),
         Text(
           "等级 ${user.level} 冒险者",
-          style: const TextStyle(color: AppTheme.accentWarmOrange, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+          style: const TextStyle(
+            color: AppTheme.accentWarmOrange,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "已投锚 ${stats['totalAnchors']} 次 · 连续 ${stats['currentStreak']} 天",
+          style: const TextStyle(
+            color: AppTheme.textLightBrown,
+            fontSize: 12,
+          ),
         ),
       ],
     );
@@ -176,18 +262,27 @@ class _ProfileViewState extends State<ProfileView> {
       padding: const EdgeInsets.only(left: 8.0),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textBrown),
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.textBrown,
+        ),
       ),
     );
   }
 
-  Widget _buildGameInput(String label, TextEditingController controller, IconData icon, {bool isNumber = false, int maxLines = 1}) {
+  Widget _buildGameInput(
+    String label,
+    TextEditingController controller,
+    IconData icon, {
+    bool isNumber = false,
+    int maxLines = 1,
+  }) {
     return TextField(
       controller: controller,
       enabled: _isEditing,
       maxLines: maxLines,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      // 核心修复：显式文字颜色
       style: const TextStyle(color: AppTheme.textBrown, fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
@@ -195,9 +290,46 @@ class _ProfileViewState extends State<ProfileView> {
         prefixIcon: Icon(icon, color: AppTheme.accentWarmOrange, size: 22),
         filled: true,
         fillColor: _isEditing ? Colors.white : Colors.transparent,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(15),
+          borderSide: BorderSide.none,
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
+    );
+  }
+
+  Widget _buildAchievementBadge(String title, bool unlocked, IconData icon) {
+    return Column(
+      children: [
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: unlocked
+                ? AppTheme.accentWarmOrange.withOpacity(0.2)
+                : Colors.grey.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: unlocked ? AppTheme.accentWarmOrange : Colors.grey,
+              width: 2,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: unlocked ? AppTheme.accentWarmOrange : Colors.grey,
+            size: 28,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 10,
+            color: unlocked ? AppTheme.textBrown : Colors.grey,
+          ),
+        ),
+      ],
     );
   }
 
@@ -216,8 +348,20 @@ class _ProfileViewState extends State<ProfileView> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: AppTheme.textLightBrown)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textBrown,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textLightBrown,
+                ),
+              ),
             ],
           )
         ],

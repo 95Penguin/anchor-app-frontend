@@ -1,8 +1,10 @@
+// lib/views/anchor_detail_view.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/anchor_model.dart';
 import '../utils/app_theme.dart';
+import '../widgets/image_viewer.dart';
 
 class AnchorDetailView extends StatefulWidget {
   final AnchorModel anchor;
@@ -15,6 +17,7 @@ class AnchorDetailView extends StatefulWidget {
 
 class _AnchorDetailViewState extends State<AnchorDetailView> {
   int _currentImageIndex = 0;
+  final PageController _pageController = PageController();
 
   static const Map<String, String> _moodEmojis = {
     '开心': '😊', '平静': '😌', '激动': '🤩',
@@ -25,6 +28,12 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
     '晴天': '☀️', '多云': '⛅', '阴天': '☁️',
     '雨天': '🌧️', '雪天': '❄️', '雾天': '🌫️',
   };
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +130,13 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                   ),
                   const SizedBox(height: 24),
                   
+                  // 照片网格（如果有多张照片）
+                  if (widget.anchor.imagePaths.length > 1)
+                    _buildPhotoGrid(),
+                  
+                  if (widget.anchor.imagePaths.length > 1)
+                    const SizedBox(height: 24),
+                  
                   // 属性增长信息
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -158,7 +174,7 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
     );
   }
 
-  // 图片画廊
+  // 顶部大图轮播
   Widget _buildImageGallery() {
     if (widget.anchor.imagePaths.isEmpty) return const SizedBox();
     
@@ -167,14 +183,44 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
       children: [
         // 图片轮播
         PageView.builder(
+          controller: _pageController,
           itemCount: widget.anchor.imagePaths.length,
           onPageChanged: (index) {
             setState(() => _currentImageIndex = index);
           },
           itemBuilder: (context, index) {
-            return Image.file(
-              File(widget.anchor.imagePaths[index]),
-              fit: BoxFit.cover,
+            return GestureDetector(
+              onTap: () {
+                // 点击放大查看
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImageViewer(
+                      imagePaths: widget.anchor.imagePaths,
+                      initialIndex: index,
+                    ),
+                  ),
+                );
+              },
+              child: Image.file(
+                File(widget.anchor.imagePaths[index]),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: AppTheme.accentWarmOrange.withOpacity(0.1),
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image, size: 64, color: AppTheme.textLightBrown),
+                          SizedBox(height: 8),
+                          Text('图片加载失败', style: TextStyle(color: AppTheme.textLightBrown)),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             );
           },
         ),
@@ -203,6 +249,62 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
               ),
             ),
           ),
+      ],
+    );
+  }
+
+  // 底部照片网格
+  Widget _buildPhotoGrid() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          '所有照片',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textBrown,
+          ),
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+          ),
+          itemCount: widget.anchor.imagePaths.length,
+          itemBuilder: (context, index) {
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ImageViewer(
+                      imagePaths: widget.anchor.imagePaths,
+                      initialIndex: index,
+                    ),
+                  ),
+                );
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(widget.anchor.imagePaths[index]),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: AppTheme.accentWarmOrange.withOpacity(0.1),
+                      child: const Icon(Icons.broken_image, color: AppTheme.textLightBrown),
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        ),
       ],
     );
   }

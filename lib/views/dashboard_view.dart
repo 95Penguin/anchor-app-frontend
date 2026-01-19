@@ -1,3 +1,4 @@
+// lib/views/dashboard_view.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
@@ -18,16 +19,29 @@ class _DashboardViewState extends State<DashboardView>
   late Animation<double> _breathAnimation;
   bool _showFullRadar = false;
 
+  // 每日一言
+  final List<String> _dailyQuotes = [
+    '每一个当下,都值得被铭记',
+    '时光不语,锚点不忘',
+    '成长的痕迹,由你书写',
+    '投下锚点,让回忆有迹可循',
+    '生活的精彩,藏在每个瞬间',
+    '记录今天,成就明天',
+  ];
+
+  String get _todayQuote {
+    final dayOfYear = DateTime.now().difference(DateTime(DateTime.now().year, 1, 1)).inDays;
+    return _dailyQuotes[dayOfYear % _dailyQuotes.length];
+  }
+
   @override
   void initState() {
     super.initState();
-    // 呼吸动画: 2.5秒一个来回
     _breathController = AnimationController(
       duration: const Duration(milliseconds: 2500),
       vsync: this,
     )..repeat(reverse: true);
 
-    // 调整浮动幅度为 15 像素
     _breathAnimation = Tween<double>(begin: -15.0, end: 15.0).animate(
       CurvedAnimation(parent: _breathController, curve: Curves.easeInOut),
     );
@@ -43,27 +57,28 @@ class _DashboardViewState extends State<DashboardView>
   Widget build(BuildContext context) {
     final provider = Provider.of<AppProvider>(context);
     final user = provider.user;
+    final stats = provider.getStatistics();
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: Stack(
         children: [
-          // 1. 背景层: 暖色调渐变
+          // 背景层
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFFFFE0B2), // 浅橘
-                  Color(0xFFFFF9C4), // 浅黄
-                  Color(0xFFFFF5E1), // 奶油
+                  Color(0xFFFFE0B2),
+                  Color(0xFFFFF9C4),
+                  Color(0xFFFFF5E1),
                 ],
               ),
             ),
           ),
 
-          // 2. 装饰层: 底部光晕 (增强角色站立感)
+          // 装饰层
           Positioned(
             bottom: -50,
             left: 0,
@@ -87,19 +102,18 @@ class _DashboardViewState extends State<DashboardView>
             ),
           ),
 
-          // 3. 人物立绘层 (带呼吸动画)
+          // 人物立绘
           AnimatedBuilder(
             animation: _breathAnimation,
             builder: (context, child) {
               return Positioned(
-                // 调低 bottom，让立绘“踩”在底部导航栏上
-                bottom: 10 + _breathAnimation.value, 
+                bottom: 10 + _breathAnimation.value,
                 left: 0,
                 right: 0,
                 child: Center(
                   child: Image.asset(
                     'assets/images/avatar.png',
-                    height: screenHeight * 0.9, // 稍微增大立绘，填充卡片撤掉后的空白
+                    height: screenHeight * 0.9,
                     fit: BoxFit.contain,
                     alignment: Alignment.bottomCenter,
                   ),
@@ -108,33 +122,48 @@ class _DashboardViewState extends State<DashboardView>
             },
           ),
 
-          // 4. 左上角 HUD: 角色状态
+          // 左上角 HUD
           Positioned(
             top: 60,
             left: 20,
             child: _buildStatusHUD(user),
           ),
 
-          // 5. 右上角 HUD: 迷你雷达
+          // 右上角 HUD
           Positioned(
             top: 60,
             right: 20,
             child: _buildMiniRadar(user),
           ),
 
-          // 6. 全屏雷达图弹窗 (点击右上角触发)
+          // 每日一言
+          Positioned(
+            top: 170,
+            left: 20,
+            right: 20,
+            child: _buildDailyQuote(),
+          ),
+
+          // 统计卡片
+          Positioned(
+            top: 240,
+            left: 20,
+            right: 20,
+            child: _buildStatsCards(stats),
+          ),
+
+          // 全屏雷达图弹窗
           if (_showFullRadar) _buildFullRadarOverlay(user),
         ],
       ),
     );
   }
 
-  // 构建状态栏 HUD
   Widget _buildStatusHUD(UserModel user) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
-        color: AppTheme.paperColor.withOpacity(0.9), // 使用羊皮纸色，高对比度
+        color: AppTheme.paperColor.withOpacity(0.9),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.textBrown.withOpacity(0.1)),
         boxShadow: [
@@ -195,7 +224,6 @@ class _DashboardViewState extends State<DashboardView>
     );
   }
 
-  // 构建迷你雷达 HUD
   Widget _buildMiniRadar(UserModel user) {
     return GestureDetector(
       onTap: () => setState(() => _showFullRadar = true),
@@ -219,7 +247,89 @@ class _DashboardViewState extends State<DashboardView>
     );
   }
 
-  // 构建全屏雷达图弹窗
+  Widget _buildDailyQuote() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.accentWarmOrange.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.format_quote, color: AppTheme.accentWarmOrange, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _todayQuote,
+              style: const TextStyle(
+                color: AppTheme.textBrown,
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsCards(Map<String, dynamic> stats) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            '连续打卡',
+            '${stats['currentStreak']}天',
+            Icons.local_fire_department,
+            Colors.orange,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            '本周记录',
+            '${stats['weekAnchors']}次',
+            Icons.calendar_today,
+            Colors.blue,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppTheme.textLightBrown,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFullRadarOverlay(UserModel user) {
     return GestureDetector(
       onTap: () => setState(() => _showFullRadar = false),
