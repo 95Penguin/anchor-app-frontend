@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/anchor_model.dart';
 import '../providers/app_provider.dart';
+import '../providers/theme_provider.dart';
 import '../utils/app_theme.dart';
 
 class EditAnchorView extends StatefulWidget {
@@ -54,19 +55,39 @@ class _EditAnchorViewState extends State<EditAnchorView> {
     _selectedWeather = widget.anchor.weather;
   }
 
+  Color _getAccentColor(ThemeProvider themeProvider) {
+    switch (themeProvider.currentTheme) {
+      case AppThemeMode.warm:
+        return const Color(0xFFFF8A65);
+      case AppThemeMode.ocean:
+        return const Color(0xFF0097A7);
+      case AppThemeMode.forest:
+        return const Color(0xFF4CAF50);
+      case AppThemeMode.dark:
+        return const Color(0xFFFF8A65);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final accentColor = _getAccentColor(themeProvider);
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final cardColor = Theme.of(context).cardTheme.color ?? Colors.white;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
+
     return Scaffold(
-      backgroundColor: AppTheme.backgroundWarm,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
+        backgroundColor: backgroundColor,
         title: const Text('修改锚点'),
         actions: [
           TextButton(
-            onPressed: _saveChanges,
-            child: const Text(
+            onPressed: () => _saveChanges(accentColor),
+            child: Text(
               '保存',
               style: TextStyle(
-                color: AppTheme.accentWarmOrange,
+                color: accentColor,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -84,7 +105,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),
+                color: cardColor.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -92,8 +113,8 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                   Expanded(
                     child: TextField(
                       controller: _titleController,
-                      style: const TextStyle(
-                        color: AppTheme.textBrown,
+                      style: TextStyle(
+                        color: textColor,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -108,15 +129,15 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                   _buildQuickIcon(
                     icon: _selectedMood != null 
                         ? Text(_moodOptions[_selectedMood]!, style: const TextStyle(fontSize: 20))
-                        : const Icon(Icons.mood_outlined, size: 20, color: AppTheme.textLightBrown),
-                    onTap: _showMoodPicker,
+                        : Icon(Icons.mood_outlined, size: 20, color: textColor.withOpacity(0.5)),
+                    onTap: () => _showMoodPicker(backgroundColor, textColor, accentColor, cardColor),
                   ),
                   const SizedBox(width: 4),
                   _buildQuickIcon(
                     icon: _selectedWeather != null
                         ? Text(_weatherOptions[_selectedWeather]!, style: const TextStyle(fontSize: 20))
-                        : const Icon(Icons.wb_sunny_outlined, size: 20, color: AppTheme.textLightBrown),
-                    onTap: _showWeatherPicker,
+                        : Icon(Icons.wb_sunny_outlined, size: 20, color: textColor.withOpacity(0.5)),
+                    onTap: () => _showWeatherPicker(backgroundColor, textColor, accentColor, cardColor),
                   ),
                 ],
               ),
@@ -132,14 +153,14 @@ class _EditAnchorViewState extends State<EditAnchorView> {
             // 添加照片按钮
             if (_imagePaths.length < maxImages)
               GestureDetector(
-                onTap: _pickImage,
+                onTap: () => _pickImage(backgroundColor, textColor),
                 child: Container(
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppTheme.textBrown.withOpacity(0.05),
+                    color: textColor.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppTheme.textBrown.withOpacity(0.15),
+                      color: textColor.withOpacity(0.15),
                       width: 1.5,
                     ),
                   ),
@@ -148,7 +169,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                     children: [
                       Icon(Icons.add_photo_alternate_outlined, 
                         size: 32, 
-                        color: AppTheme.textBrown.withOpacity(0.4)
+                        color: textColor.withOpacity(0.4)
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -156,7 +177,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                             ? '添加照片'
                             : '继续添加 (${_imagePaths.length}/$maxImages)',
                         style: TextStyle(
-                          color: AppTheme.textBrown.withOpacity(0.5),
+                          color: textColor.withOpacity(0.5),
                           fontSize: 12,
                         ),
                       ),
@@ -170,13 +191,13 @@ class _EditAnchorViewState extends State<EditAnchorView> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),
+                color: cardColor.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: TextField(
                 controller: _contentController,
                 maxLines: 10,
-                style: const TextStyle(color: AppTheme.textBrown, height: 1.6),
+                style: TextStyle(color: textColor, height: 1.6),
                 decoration: const InputDecoration(
                   hintText: '感悟内容',
                   border: InputBorder.none,
@@ -191,14 +212,14 @@ class _EditAnchorViewState extends State<EditAnchorView> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),
+                color: cardColor.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: TextField(
                 controller: _locationController,
-                style: const TextStyle(color: AppTheme.textBrown),
-                decoration: const InputDecoration(
-                  icon: Icon(Icons.location_on, color: AppTheme.accentWarmOrange),
+                style: TextStyle(color: textColor),
+                decoration: InputDecoration(
+                  icon: Icon(Icons.location_on, color: accentColor),
                   hintText: '地点',
                   border: InputBorder.none,
                 ),
@@ -269,14 +290,14 @@ class _EditAnchorViewState extends State<EditAnchorView> {
     );
   }
 
-  void _showMoodPicker() {
+  void _showMoodPicker(Color backgroundColor, Color textColor, Color accentColor, Color cardColor) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.backgroundWarm,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -285,7 +306,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('选择心情', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
+                Text('选择心情', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                 if (_selectedMood != null)
                   TextButton(
                     onPressed: () {
@@ -310,10 +331,10 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.accentWarmOrange : Colors.white.withOpacity(0.6),
+                      color: isSelected ? accentColor : cardColor.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppTheme.accentWarmOrange : AppTheme.textBrown.withOpacity(0.2),
+                        color: isSelected ? accentColor : textColor.withOpacity(0.2),
                         width: 2,
                       ),
                     ),
@@ -322,7 +343,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : AppTheme.textBrown,
+                        color: isSelected ? Colors.white : textColor,
                       ),
                     ),
                   ),
@@ -336,14 +357,14 @@ class _EditAnchorViewState extends State<EditAnchorView> {
     );
   }
 
-  void _showWeatherPicker() {
+  void _showWeatherPicker(Color backgroundColor, Color textColor, Color accentColor, Color cardColor) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.backgroundWarm,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -352,7 +373,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('选择天气', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
+                Text('选择天气', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                 if (_selectedWeather != null)
                   TextButton(
                     onPressed: () {
@@ -377,10 +398,10 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.accentWarmOrange : Colors.white.withOpacity(0.6),
+                      color: isSelected ? accentColor : cardColor.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppTheme.accentWarmOrange : AppTheme.textBrown.withOpacity(0.2),
+                        color: isSelected ? accentColor : textColor.withOpacity(0.2),
                         width: 2,
                       ),
                     ),
@@ -389,7 +410,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : AppTheme.textBrown,
+                        color: isSelected ? Colors.white : textColor,
                       ),
                     ),
                   ),
@@ -403,12 +424,12 @@ class _EditAnchorViewState extends State<EditAnchorView> {
     );
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(Color backgroundColor, Color textColor) async {
     if (_imagePaths.length >= maxImages) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('最多只能添加 $maxImages 张照片'),
-          backgroundColor: AppTheme.textBrown,
+          backgroundColor: textColor,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -419,9 +440,9 @@ class _EditAnchorViewState extends State<EditAnchorView> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.backgroundWarm,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
@@ -441,7 +462,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                 backgroundColor: Colors.blue,
                 child: Icon(Icons.camera_alt, color: Colors.white),
               ),
-              title: const Text('拍照', style: TextStyle(color: AppTheme.textBrown)),
+              title: Text('拍照', style: TextStyle(color: textColor)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
@@ -455,7 +476,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
                 backgroundColor: Colors.green,
                 child: Icon(Icons.photo_library, color: Colors.white),
               ),
-              title: const Text('从相册选择', style: TextStyle(color: AppTheme.textBrown)),
+              title: Text('从相册选择', style: TextStyle(color: textColor)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -471,8 +492,7 @@ class _EditAnchorViewState extends State<EditAnchorView> {
     );
   }
 
-  void _saveChanges() {
-    // 注意：这里需要创建新的 anchor 对象来替换，因为 copyWith 不支持 imagePaths
+  void _saveChanges(Color accentColor) {
     final updatedAnchor = AnchorModel(
       id: widget.anchor.id,
       title: _titleController.text,
@@ -486,14 +506,13 @@ class _EditAnchorViewState extends State<EditAnchorView> {
       weather: _selectedWeather,
     );
     
-    // 这里需要修改 app_provider 来支持完整替换
     Provider.of<AppProvider>(context, listen: false).updateAnchorFull(updatedAnchor);
     
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('修改已保存'),
-        backgroundColor: AppTheme.accentWarmOrange,
+      SnackBar(
+        content: const Text('修改已保存'),
+        backgroundColor: accentColor,
         behavior: SnackBarBehavior.floating,
       ),
     );

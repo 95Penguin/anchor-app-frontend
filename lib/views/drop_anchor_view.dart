@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_vibrate/flutter_vibrate.dart';
 import '../providers/app_provider.dart';
+import '../providers/theme_provider.dart';
 import '../models/anchor_model.dart';
 import '../utils/app_theme.dart';
 import '../services/image_helper.dart';
@@ -63,10 +64,31 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
     super.dispose();
   }
 
+  Color _getAccentColor(ThemeProvider themeProvider) {
+    switch (themeProvider.currentTheme) {
+      case AppThemeMode.warm:
+        return const Color(0xFFFF8A65);
+      case AppThemeMode.ocean:
+        return const Color(0xFF0097A7);
+      case AppThemeMode.forest:
+        return const Color(0xFF4CAF50);
+      case AppThemeMode.dark:
+        return const Color(0xFFFF8A65);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final accentColor = _getAccentColor(themeProvider);
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final cardColor = Theme.of(context).cardTheme.color ?? Colors.white;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
+
     return Scaffold(
+      backgroundColor: backgroundColor,
       appBar: AppBar(
+        backgroundColor: backgroundColor,
         title: const Text('投掷锚点'),
         centerTitle: true,
       ),
@@ -78,7 +100,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),
+                color: cardColor.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -86,14 +108,14 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                   Expanded(
                     child: TextField(
                       controller: _titleController,
-                      style: const TextStyle(
-                        color: AppTheme.textBrown, 
+                      style: TextStyle(
+                        color: textColor, 
                         fontSize: 18, 
                         fontWeight: FontWeight.bold
                       ),
                       decoration: InputDecoration(
                         hintText: "给这次记录起个名...",
-                        hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3)),
+                        hintStyle: TextStyle(color: textColor.withOpacity(0.3)),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -103,15 +125,15 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                   _buildQuickIcon(
                     icon: _selectedMood != null 
                         ? Text(_moodOptions[_selectedMood]!, style: const TextStyle(fontSize: 20))
-                        : const Icon(Icons.mood_outlined, size: 20, color: AppTheme.textLightBrown),
-                    onTap: _showMoodPicker,
+                        : Icon(Icons.mood_outlined, size: 20, color: textColor.withOpacity(0.5)),
+                    onTap: () => _showMoodPicker(backgroundColor, textColor, accentColor),
                   ),
                   const SizedBox(width: 4),
                   _buildQuickIcon(
                     icon: _selectedWeather != null
                         ? Text(_weatherOptions[_selectedWeather]!, style: const TextStyle(fontSize: 20))
-                        : const Icon(Icons.wb_sunny_outlined, size: 20, color: AppTheme.textLightBrown),
-                    onTap: _showWeatherPicker,
+                        : Icon(Icons.wb_sunny_outlined, size: 20, color: textColor.withOpacity(0.5)),
+                    onTap: () => _showWeatherPicker(backgroundColor, textColor, accentColor),
                   ),
                 ],
               ),
@@ -125,14 +147,14 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
             
             if (_selectedImagePaths.length < maxImages)
               GestureDetector(
-                onTap: _pickImage,
+                onTap: () => _pickImage(backgroundColor, textColor),
                 child: Container(
                   height: 120,
                   decoration: BoxDecoration(
-                    color: AppTheme.textBrown.withOpacity(0.05),
+                    color: textColor.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppTheme.textBrown.withOpacity(0.15),
+                      color: textColor.withOpacity(0.15),
                       width: 1.5,
                     ),
                   ),
@@ -141,7 +163,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                     children: [
                       Icon(Icons.add_photo_alternate_outlined, 
                         size: 36, 
-                        color: AppTheme.textBrown.withOpacity(0.4)
+                        color: textColor.withOpacity(0.4)
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -149,7 +171,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                             ? '添加照片(可选)'
                             : '继续添加 (${_selectedImagePaths.length}/$maxImages)',
                         style: TextStyle(
-                          color: AppTheme.textBrown.withOpacity(0.5),
+                          color: textColor.withOpacity(0.5),
                           fontSize: 12,
                         ),
                       ),
@@ -162,20 +184,20 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.6),
+                color: cardColor.withOpacity(0.6),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: TextField(
                 controller: _contentController,
                 maxLines: 8,
-                style: const TextStyle(
-                  color: AppTheme.textBrown, 
+                style: TextStyle(
+                  color: textColor, 
                   fontSize: 16, 
                   height: 1.6
                 ),
                 decoration: InputDecoration(
                   hintText: "此刻在想什么...",
-                  hintStyle: TextStyle(color: AppTheme.textBrown.withOpacity(0.3)),
+                  hintStyle: TextStyle(color: textColor.withOpacity(0.3)),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -184,7 +206,6 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
             ),
             const SizedBox(height: 20),
 
-            // 替换原来的 Row 区域（大约在第 280 行附近）
             Row(
               children: [
                 // 属性选择器
@@ -193,8 +214,8 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppTheme.accentWarmOrange.withOpacity(0.2),
-                        AppTheme.accentWarmOrange.withOpacity(0.1),
+                        accentColor.withOpacity(0.2),
+                        accentColor.withOpacity(0.1),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(16),
@@ -202,15 +223,15 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.auto_awesome, color: AppTheme.accentWarmOrange, size: 18),
+                      Icon(Icons.auto_awesome, color: accentColor, size: 18),
                       const SizedBox(width: 6),
                       DropdownButton<String>(
                         value: _selectedAttr,
                         underline: const SizedBox(),
-                        dropdownColor: AppTheme.paperColor,
-                        icon: const Icon(Icons.arrow_drop_down, color: AppTheme.accentWarmOrange, size: 20),
-                        style: const TextStyle(
-                          color: AppTheme.textBrown,
+                        dropdownColor: cardColor,
+                        icon: Icon(Icons.arrow_drop_down, color: accentColor, size: 20),
+                        style: TextStyle(
+                          color: textColor,
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                         ),
@@ -226,10 +247,10 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                           }
                         },
                       ),
-                      const Text(
+                      Text(
                         ' +5',
                         style: TextStyle(
-                          color: AppTheme.accentWarmOrange,
+                          color: accentColor,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -238,38 +259,38 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                   ),
                 ),
                 const SizedBox(width: 12),
-                // 地点输入框 - 优化版
+                // 地点输入框
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.6),
+                      color: cardColor.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: AppTheme.textBrown.withOpacity(0.1),
+                        color: textColor.withOpacity(0.1),
                         width: 1,
                       ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.location_on_rounded, 
-                          color: AppTheme.accentWarmOrange, 
+                          color: accentColor, 
                           size: 18
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _locationController,
-                            style: const TextStyle(
-                              color: AppTheme.textBrown, 
+                            style: TextStyle(
+                              color: textColor, 
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                             ),
                             decoration: InputDecoration(
                               hintText: '记录地点',
                               hintStyle: TextStyle(
-                                color: AppTheme.textBrown.withOpacity(0.3), 
+                                color: textColor.withOpacity(0.3), 
                                 fontSize: 13
                               ),
                               border: InputBorder.none,
@@ -289,11 +310,11 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
             SizedBox(
               height: 56,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _dropAnchor,
+                onPressed: _isLoading ? null : () => _dropAnchor(accentColor),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentWarmOrange,
+                  backgroundColor: accentColor,
                   elevation: 4,
-                  shadowColor: AppTheme.accentWarmOrange.withOpacity(0.5),
+                  shadowColor: accentColor.withOpacity(0.5),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 child: _isLoading
@@ -381,15 +402,15 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
     );
   }
 
-  void _showMoodPicker() {
+  void _showMoodPicker(Color backgroundColor, Color textColor, Color accentColor) {
     _triggerHapticFeedback();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.backgroundWarm,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -398,7 +419,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('选择心情', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
+                Text('选择心情', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                 if (_selectedMood != null)
                   TextButton(
                     onPressed: () {
@@ -424,10 +445,10 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.accentWarmOrange : Colors.white.withOpacity(0.6),
+                      color: isSelected ? accentColor : Theme.of(context).cardTheme.color?.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppTheme.accentWarmOrange : AppTheme.textBrown.withOpacity(0.2),
+                        color: isSelected ? accentColor : textColor.withOpacity(0.2),
                         width: 2,
                       ),
                     ),
@@ -436,7 +457,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : AppTheme.textBrown,
+                        color: isSelected ? Colors.white : textColor,
                       ),
                     ),
                   ),
@@ -450,15 +471,15 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
     );
   }
 
-  void _showWeatherPicker() {
+  void _showWeatherPicker(Color backgroundColor, Color textColor, Color accentColor) {
     _triggerHapticFeedback();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.backgroundWarm,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -467,7 +488,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('选择天气', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textBrown)),
+                Text('选择天气', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                 if (_selectedWeather != null)
                   TextButton(
                     onPressed: () {
@@ -493,10 +514,10 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.accentWarmOrange : Colors.white.withOpacity(0.6),
+                      color: isSelected ? accentColor : Theme.of(context).cardTheme.color?.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppTheme.accentWarmOrange : AppTheme.textBrown.withOpacity(0.2),
+                        color: isSelected ? accentColor : textColor.withOpacity(0.2),
                         width: 2,
                       ),
                     ),
@@ -505,7 +526,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : AppTheme.textBrown,
+                        color: isSelected ? Colors.white : textColor,
                       ),
                     ),
                   ),
@@ -519,13 +540,13 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
     );
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(Color backgroundColor, Color textColor) async {
     _triggerHapticFeedback();
     if (_selectedImagePaths.length >= maxImages) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('最多只能添加 $maxImages 张照片'),
-          backgroundColor: AppTheme.textBrown,
+          backgroundColor: textColor,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -536,9 +557,9 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.backgroundWarm,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
@@ -558,7 +579,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                 backgroundColor: Colors.blue,
                 child: Icon(Icons.camera_alt, color: Colors.white),
               ),
-              title: const Text('拍照', style: TextStyle(color: AppTheme.textBrown)),
+              title: Text('拍照', style: TextStyle(color: textColor)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
@@ -572,7 +593,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                 backgroundColor: Colors.green,
                 child: Icon(Icons.photo_library, color: Colors.white),
               ),
-              title: const Text('从相册选择', style: TextStyle(color: AppTheme.textBrown)),
+              title: Text('从相册选择', style: TextStyle(color: textColor)),
               onTap: () async {
                 Navigator.pop(ctx);
                 final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -601,12 +622,12 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
     });
   }
 
-  Future<void> _dropAnchor() async {
+  Future<void> _dropAnchor(Color accentColor) async {
     if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("请填写标题和内容哦"), 
-          backgroundColor: AppTheme.textBrown,
+        SnackBar(
+          content: const Text("请填写标题和内容哦"), 
+          backgroundColor: Theme.of(context).textTheme.bodyLarge?.color,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -637,14 +658,13 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('⚓ 锚点已投掷!$_selectedAttr 属性 +5'), 
-        backgroundColor: AppTheme.accentWarmOrange,
+        content: Text('⚓ 锚点已投掷! $_selectedAttr 属性 +5'), 
+        backgroundColor: accentColor,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       )
     );
     
-    // 跳转到时间轴
     if (mounted) {
       DefaultTabController.of(context).animateTo(1);
     }
@@ -660,20 +680,12 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
   }
 
   void _triggerHapticFeedback() {
-    Vibrate.feedback(FeedbackType.light);
-  }
-}
-
-// 在 drop_anchor_view.dart 文件末尾，修改 _triggerHapticFeedback 方法
-
-void _triggerHapticFeedback() {
-  try {
-    // 只在移动端触发振动
-    if (Platform.isAndroid || Platform.isIOS) {
-      Vibrate.feedback(FeedbackType.light);
+    try {
+      if (Platform.isAndroid || Platform.isIOS) {
+        Vibrate.feedback(FeedbackType.light);
+      }
+    } catch (e) {
+      print('振动功能不可用: $e');
     }
-  } catch (e) {
-    // 忽略振动错误
-    print('振动功能不可用: $e');
   }
 }
