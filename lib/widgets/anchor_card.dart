@@ -1,9 +1,11 @@
+// lib/widgets/anchor_card.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/anchor_model.dart';
 import '../providers/app_provider.dart';
+import '../providers/theme_provider.dart';
 import '../utils/app_theme.dart';
 import '../views/edit_anchor_view.dart';
 import '../views/anchor_detail_view.dart';
@@ -24,10 +26,28 @@ class AnchorCard extends StatelessWidget {
     '雨天': '🌧️', '雪天': '❄️', '雾天': '🌫️',
   };
 
+  Color _getAccentColor(ThemeProvider themeProvider) {
+    switch (themeProvider.currentTheme) {
+      case AppThemeMode.warm:
+        return const Color(0xFFFF8A65);
+      case AppThemeMode.ocean:
+        return const Color(0xFF0097A7);
+      case AppThemeMode.forest:
+        return const Color(0xFF4CAF50);
+      case AppThemeMode.dark:
+        return const Color(0xFFFF8A65);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final accentColor = _getAccentColor(themeProvider);
+    final cardColor = Theme.of(context).cardTheme.color ?? Colors.white;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
+    final subtitleColor = textColor.withOpacity(0.6);
+
     return GestureDetector(
-      // 【修改】单击跳转到详情页
       onTap: () {
         Navigator.push(
           context,
@@ -36,15 +56,15 @@ class AnchorCard extends StatelessWidget {
           ),
         );
       },
-      onLongPress: () => _showActionMenu(context),
+      onLongPress: () => _showActionMenu(context, accentColor, cardColor, textColor),
       
       child: Container(
         decoration: BoxDecoration(
-          color: AppTheme.paperColor,
+          color: cardColor,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppTheme.textBrown.withOpacity(0.08),
+              color: textColor.withOpacity(0.08),
               blurRadius: 12,
               offset: const Offset(0, 6),
             )
@@ -56,8 +76,8 @@ class AnchorCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 【优化】照片展示区域
-              _buildPhotoSection(),
+              // 照片展示区域
+              _buildPhotoSection(accentColor, textColor),
               
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -70,8 +90,8 @@ class AnchorCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             anchor.title,
-                            style: const TextStyle(
-                              color: AppTheme.textBrown,
+                            style: TextStyle(
+                              color: textColor,
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
                             ),
@@ -80,7 +100,6 @@ class AnchorCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        // 心情和天气标签
                         if (anchor.weather != null)
                           Text(_weatherEmojis[anchor.weather!] ?? '', style: const TextStyle(fontSize: 14)),
                         if (anchor.weather != null && anchor.mood != null)
@@ -96,7 +115,7 @@ class AnchorCard extends StatelessWidget {
                       child: Text(
                         DateFormat('MM/dd HH:mm').format(anchor.createdAt),
                         style: TextStyle(
-                          color: AppTheme.textLightBrown.withOpacity(0.6),
+                          color: subtitleColor,
                           fontSize: 11,
                         ),
                       ),
@@ -109,7 +128,7 @@ class AnchorCard extends StatelessWidget {
                       anchor.content,
                       maxLines: showFull ? null : 3,
                       style: TextStyle(
-                        color: AppTheme.textBrown.withOpacity(0.8),
+                        color: subtitleColor,
                         fontSize: 13,
                         height: 1.5,
                       ),
@@ -120,16 +139,16 @@ class AnchorCard extends StatelessWidget {
                     // 地点和经验值
                     Row(
                       children: [
-                        const Icon(Icons.location_on_rounded, size: 12, color: AppTheme.accentWarmOrange),
+                        Icon(Icons.location_on_rounded, size: 12, color: accentColor),
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             anchor.location,
-                            style: const TextStyle(fontSize: 10, color: AppTheme.textLightBrown),
+                            style: TextStyle(fontSize: 10, color: subtitleColor),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        _buildXPBadge(),
+                        _buildXPBadge(accentColor),
                       ],
                     ),
                   ],
@@ -142,20 +161,17 @@ class AnchorCard extends StatelessWidget {
     );
   }
 
-  // 【优化】照片展示区域
-  Widget _buildPhotoSection() {
+  Widget _buildPhotoSection(Color accentColor, Color textColor) {
     if (anchor.imagePaths.isEmpty) {
-      // 没有照片时显示装饰条
       return Container(
         height: 4,
         width: double.infinity,
-        color: AppTheme.accentWarmOrange.withOpacity(0.8),
+        color: accentColor.withOpacity(0.8),
       );
     }
 
-    // 列表模式：显示第一张照片
     if (!showFull) {
-      return Container(
+      return SizedBox(
         height: 140,
         width: double.infinity,
         child: Stack(
@@ -166,14 +182,13 @@ class AnchorCard extends StatelessWidget {
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
-                  color: AppTheme.accentWarmOrange.withOpacity(0.1),
-                  child: const Center(
-                    child: Icon(Icons.broken_image, color: AppTheme.textLightBrown, size: 40),
+                  color: accentColor.withOpacity(0.1),
+                  child: Center(
+                    child: Icon(Icons.broken_image, color: textColor.withOpacity(0.4), size: 40),
                   ),
                 );
               },
             ),
-            // 如果有多张照片，显示数量标识
             if (anchor.imagePaths.length > 1)
               Positioned(
                 top: 8,
@@ -202,8 +217,7 @@ class AnchorCard extends StatelessWidget {
       );
     }
 
-    // 详情模式：显示多张照片横向滚动
-    return Container(
+    return SizedBox(
       height: 200,
       child: anchor.imagePaths.length == 1
           ? Image.file(
@@ -231,23 +245,30 @@ class AnchorCard extends StatelessWidget {
     );
   }
 
-  void _showActionMenu(BuildContext context) {
+  void _showActionMenu(BuildContext context, Color accentColor, Color backgroundColor, Color textColor) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Container(
-        decoration: const BoxDecoration(
-          color: AppTheme.backgroundWarm,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 40, 
+              height: 4, 
+              decoration: BoxDecoration(
+                color: textColor.withOpacity(0.2), 
+                borderRadius: BorderRadius.circular(2)
+              )
+            ),
             const SizedBox(height: 20),
             
-            const Text("锚点操作", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textBrown)),
+            Text("锚点操作", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor)),
             const SizedBox(height: 10),
             
             ListTile(
@@ -255,7 +276,7 @@ class AnchorCard extends StatelessWidget {
                 backgroundColor: Colors.blue.withOpacity(0.1),
                 child: const Icon(Icons.edit_rounded, color: Colors.blue),
               ),
-              title: const Text("修改这段记录", style: TextStyle(color: AppTheme.textBrown)),
+              title: Text("修改这段记录", style: TextStyle(color: textColor)),
               onTap: () {
                 Navigator.pop(ctx);
                 Navigator.push(context, MaterialPageRoute(builder: (context) => EditAnchorView(anchor: anchor)));
@@ -270,7 +291,7 @@ class AnchorCard extends StatelessWidget {
               title: const Text("抹除这段回忆", style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(ctx);
-                _confirmDelete(context);
+                _confirmDelete(context, backgroundColor, textColor);
               },
             ),
             const SizedBox(height: 20),
@@ -280,14 +301,14 @@ class AnchorCard extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context) {
+  void _confirmDelete(BuildContext context, Color backgroundColor, Color textColor) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.paperColor,
+        backgroundColor: backgroundColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("确定抹除？", style: TextStyle(color: AppTheme.textBrown)),
-        content: const Text("一旦撤回，对应的属性成长也会受到影响哦。"),
+        title: Text("确定抹除？", style: TextStyle(color: textColor)),
+        content: Text("一旦撤回，对应的属性成长也会受到影响哦。", style: TextStyle(color: textColor)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("再想想")),
           TextButton(
@@ -302,11 +323,14 @@ class AnchorCard extends StatelessWidget {
     );
   }
 
-  Widget _buildXPBadge() {
+  Widget _buildXPBadge(Color accentColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: AppTheme.accentWarmOrange, borderRadius: BorderRadius.circular(8)),
-      child: Text("+${anchor.attributeDelta.getTotalPoints()}", style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(color: accentColor, borderRadius: BorderRadius.circular(8)),
+      child: Text(
+        "+${anchor.attributeDelta.getTotalPoints()}", 
+        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
+      ),
     );
   }
 }

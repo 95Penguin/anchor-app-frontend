@@ -2,7 +2,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/anchor_model.dart';
+import '../providers/theme_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/image_viewer.dart';
 
@@ -35,10 +37,29 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
     super.dispose();
   }
 
+  Color _getAccentColor(ThemeProvider themeProvider) {
+    switch (themeProvider.currentTheme) {
+      case AppThemeMode.warm:
+        return const Color(0xFFFF8A65);
+      case AppThemeMode.ocean:
+        return const Color(0xFF0097A7);
+      case AppThemeMode.forest:
+        return const Color(0xFF4CAF50);
+      case AppThemeMode.dark:
+        return const Color(0xFFFF8A65);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final accentColor = _getAccentColor(themeProvider);
+    final backgroundColor = Theme.of(context).scaffoldBackgroundColor;
+    final cardColor = Theme.of(context).cardTheme.color ?? Colors.white;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color ?? Colors.black;
+
     return Scaffold(
-      backgroundColor: AppTheme.backgroundWarm,
+      backgroundColor: backgroundColor,
       body: CustomScrollView(
         slivers: [
           // 顶部图片区域（如果有照片）
@@ -46,17 +67,18 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
             SliverAppBar(
               expandedHeight: 300,
               pinned: true,
-              backgroundColor: AppTheme.accentWarmOrange,
+              backgroundColor: accentColor,
+              iconTheme: IconThemeData(color: textColor),
               flexibleSpace: FlexibleSpaceBar(
-                background: _buildImageGallery(),
+                background: _buildImageGallery(accentColor),
               ),
             )
           else
             SliverAppBar(
               pinned: true,
-              backgroundColor: AppTheme.backgroundWarm,
+              backgroundColor: backgroundColor,
               elevation: 0,
-              iconTheme: const IconThemeData(color: AppTheme.textBrown),
+              iconTheme: IconThemeData(color: textColor),
             ),
           
           // 内容区域
@@ -69,10 +91,10 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                   // 标题
                   Text(
                     widget.anchor.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textBrown,
+                      color: textColor,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -85,20 +107,28 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                       _buildInfoChip(
                         Icons.access_time,
                         DateFormat('yyyy年MM月dd日 HH:mm').format(widget.anchor.createdAt),
+                        textColor,
+                        backgroundColor,
                       ),
                       if (widget.anchor.weather != null)
                         _buildInfoChip(
                           null,
                           '${_weatherEmojis[widget.anchor.weather!]} ${widget.anchor.weather}',
+                          textColor,
+                          backgroundColor,
                         ),
                       if (widget.anchor.mood != null)
                         _buildInfoChip(
                           null,
                           '${_moodEmojis[widget.anchor.mood!]} ${widget.anchor.mood}',
+                          textColor,
+                          backgroundColor,
                         ),
                       _buildInfoChip(
                         Icons.location_on,
                         widget.anchor.location,
+                        textColor,
+                        backgroundColor,
                       ),
                     ],
                   ),
@@ -109,11 +139,11 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppTheme.paperColor,
+                      color: cardColor,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.textBrown.withOpacity(0.05),
+                          color: textColor.withOpacity(0.05),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -121,10 +151,10 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                     ),
                     child: Text(
                       widget.anchor.content,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         height: 1.8,
-                        color: AppTheme.textBrown,
+                        color: textColor,
                       ),
                     ),
                   ),
@@ -132,7 +162,7 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                   
                   // 照片网格（如果有多张照片）
                   if (widget.anchor.imagePaths.length > 1)
-                    _buildPhotoGrid(),
+                    _buildPhotoGrid(textColor, accentColor),
                   
                   if (widget.anchor.imagePaths.length > 1)
                     const SizedBox(height: 24),
@@ -143,22 +173,22 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          AppTheme.accentWarmOrange.withOpacity(0.1),
-                          AppTheme.accentWarmOrange.withOpacity(0.05),
+                          accentColor.withOpacity(0.1),
+                          accentColor.withOpacity(0.05),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.trending_up, color: AppTheme.accentWarmOrange),
+                        Icon(Icons.trending_up, color: accentColor),
                         const SizedBox(width: 12),
                         Text(
                           '本次成长: +${widget.anchor.attributeDelta.getTotalPoints()} 经验值',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textBrown,
+                            color: textColor,
                           ),
                         ),
                       ],
@@ -175,7 +205,7 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
   }
 
   // 顶部大图轮播
-  Widget _buildImageGallery() {
+  Widget _buildImageGallery(Color accentColor) {
     if (widget.anchor.imagePaths.isEmpty) return const SizedBox();
     
     return Stack(
@@ -191,7 +221,6 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
           itemBuilder: (context, index) {
             return GestureDetector(
               onTap: () {
-                // 点击放大查看
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -207,14 +236,14 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
-                    color: AppTheme.accentWarmOrange.withOpacity(0.1),
+                    color: accentColor.withOpacity(0.1),
                     child: const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.broken_image, size: 64, color: AppTheme.textLightBrown),
+                          Icon(Icons.broken_image, size: 64, color: Colors.grey),
                           SizedBox(height: 8),
-                          Text('图片加载失败', style: TextStyle(color: AppTheme.textLightBrown)),
+                          Text('图片加载失败', style: TextStyle(color: Colors.grey)),
                         ],
                       ),
                     ),
@@ -254,16 +283,16 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
   }
 
   // 底部照片网格
-  Widget _buildPhotoGrid() {
+  Widget _buildPhotoGrid(Color textColor, Color accentColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '所有照片',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: AppTheme.textBrown,
+            color: textColor,
           ),
         ),
         const SizedBox(height: 12),
@@ -296,8 +325,8 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
-                      color: AppTheme.accentWarmOrange.withOpacity(0.1),
-                      child: const Icon(Icons.broken_image, color: AppTheme.textLightBrown),
+                      color: accentColor.withOpacity(0.1),
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
                     );
                   },
                 ),
@@ -309,26 +338,26 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
     );
   }
 
-  Widget _buildInfoChip(IconData? icon, String text) {
+  Widget _buildInfoChip(IconData? icon, String text, Color textColor, Color backgroundColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
+        color: backgroundColor.withOpacity(0.7),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.textBrown.withOpacity(0.1)),
+        border: Border.all(color: textColor.withOpacity(0.1)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: AppTheme.accentWarmOrange),
+            Icon(icon, size: 14, color: textColor.withOpacity(0.7)),
             const SizedBox(width: 6),
           ],
           Text(
             text,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: AppTheme.textBrown,
+              color: textColor,
             ),
           ),
         ],
