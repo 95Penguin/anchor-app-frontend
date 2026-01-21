@@ -14,12 +14,17 @@ class DashboardView extends StatefulWidget {
 }
 
 class _DashboardViewState extends State<DashboardView> 
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _breathController;
   late Animation<double> _breathAnimation;
+  late AnimationController _radarScaleController;
+  late Animation<double> _radarScaleAnimation;
   bool _showFullRadar = false;
+  
+  // 每日一言相关
+  final PageController _quotePageController = PageController();
+  int _currentQuoteIndex = 0;
 
-  // 每日一言
   final List<String> _dailyQuotes = [
     '每一个当下,都值得被铭记',
     '时光不语,锚点不忘',
@@ -37,20 +42,39 @@ class _DashboardViewState extends State<DashboardView>
   @override
   void initState() {
     super.initState();
+    
+    // 呼吸动画
     _breathController = AnimationController(
       duration: const Duration(milliseconds: 2500),
       vsync: this,
     )..repeat(reverse: true);
-
     _breathAnimation = Tween<double>(begin: -15.0, end: 15.0).animate(
       CurvedAnimation(parent: _breathController, curve: Curves.easeInOut),
+    );
+
+    // 雷达图缩放动画
+    _radarScaleController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _radarScaleAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _radarScaleController, curve: Curves.easeOutBack),
     );
   }
 
   @override
   void dispose() {
     _breathController.dispose();
+    _radarScaleController.dispose();
+    _quotePageController.dispose();
     super.dispose();
+  }
+
+  void _toggleRadar() {
+    setState(() => _showFullRadar = true);
+    _radarScaleController.forward().then((_) {
+      _radarScaleController.reverse();
+    });
   }
 
   @override
@@ -116,6 +140,17 @@ class _DashboardViewState extends State<DashboardView>
                     height: screenHeight * 0.9,
                     fit: BoxFit.contain,
                     alignment: Alignment.bottomCenter,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        height: screenHeight * 0.9,
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.person,
+                          size: 200,
+                          color: AppTheme.textBrown.withOpacity(0.3),
+                        ),
+                      );
+                    },
                   ),
                 ),
               );
@@ -129,19 +164,27 @@ class _DashboardViewState extends State<DashboardView>
             child: _buildStatusHUD(user),
           ),
 
-          // 右上角 HUD
+          // 右上角 HUD - 添加缩放动画
           Positioned(
             top: 60,
             right: 20,
-            child: _buildMiniRadar(user),
+            child: AnimatedBuilder(
+              animation: _radarScaleAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _radarScaleAnimation.value,
+                  child: _buildMiniRadar(user),
+                );
+              },
+            ),
           ),
 
-          // 每日一言
+          // 每日一言 - 改为滑动切换
           Positioned(
             top: 170,
             left: 20,
             right: 20,
-            child: _buildDailyQuote(),
+            child: _buildDailyQuoteCarousel(),
           ),
 
           // 统计卡片
@@ -226,7 +269,7 @@ class _DashboardViewState extends State<DashboardView>
 
   Widget _buildMiniRadar(UserModel user) {
     return GestureDetector(
-      onTap: () => setState(() => _showFullRadar = true),
+      onTap: _toggleRadar,
       child: Container(
         width: 85,
         height: 85,
@@ -247,26 +290,65 @@ class _DashboardViewState extends State<DashboardView>
     );
   }
 
-  Widget _buildDailyQuote() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.accentWarmOrange.withOpacity(0.3)),
-      ),
-      child: Row(
+  // 【新增】每日一言轮播
+  Widget _buildDailyQuoteCarousel() {
+    return SizedBox(
+      height: 60,
+      child: Stack(
         children: [
-          const Icon(Icons.format_quote, color: AppTheme.accentWarmOrange, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _todayQuote,
-              style: const TextStyle(
-                color: AppTheme.textBrown,
-                fontSize: 14,
-                fontStyle: FontStyle.italic,
-              ),
+          PageView.builder(
+            controller: _quotePageController,
+            itemCount: _dailyQuotes.length,
+            onPageChanged: (index) {
+              setState(() => _currentQuoteIndex = index);
+            },
+            itemBuilder: (context, index) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.accentWarmOrange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.format_quote, color: AppTheme.accentWarmOrange, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _dailyQuotes[index],
+                        style: const TextStyle(
+                          color: AppTheme.textBrown,
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          // 指示器
+          Positioned(
+            bottom: 8,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(_dailyQuotes.length, (index) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  width: _currentQuoteIndex == index ? 16 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: _currentQuoteIndex == index 
+                        ? AppTheme.accentWarmOrange 
+                        : AppTheme.textBrown.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
             ),
           ),
         ],
@@ -336,36 +418,39 @@ class _DashboardViewState extends State<DashboardView>
       child: Container(
         color: Colors.black.withOpacity(0.6),
         child: Center(
-          child: Container(
-            width: 320,
-            height: 400,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppTheme.backgroundWarm,
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: AppTheme.accentWarmOrange.withOpacity(0.3)),
-            ),
-            child: Column(
-              children: [
-                const Text(
-                  "属性详情",
-                  style: TextStyle(
-                    color: AppTheme.textBrown,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+          child: Hero(
+            tag: 'radar',
+            child: Container(
+              width: 320,
+              height: 400,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundWarm,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: AppTheme.accentWarmOrange.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    "属性详情",
+                    style: TextStyle(
+                      color: AppTheme.textBrown,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(child: RadarChartWidget(attributes: user.attributes)),
-                const SizedBox(height: 20),
-                TextButton(
-                  onPressed: () => setState(() => _showFullRadar = false),
-                  child: const Text(
-                    "返回手册",
-                    style: TextStyle(color: AppTheme.accentWarmOrange, fontWeight: FontWeight.bold),
-                  ),
-                )
-              ],
+                  const SizedBox(height: 20),
+                  Expanded(child: RadarChartWidget(attributes: user.attributes)),
+                  const SizedBox(height: 20),
+                  TextButton(
+                    onPressed: () => setState(() => _showFullRadar = false),
+                    child: const Text(
+                      "返回手册",
+                      style: TextStyle(color: AppTheme.accentWarmOrange, fontWeight: FontWeight.bold),
+                    ),
+                  )
+                ],
+              ),
             ),
           ),
         ),

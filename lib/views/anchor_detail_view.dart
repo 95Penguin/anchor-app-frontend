@@ -47,8 +47,12 @@ class _AnchorDetailViewState extends State<AnchorDetailView> {
         return const Color(0xFF4CAF50);
       case AppThemeMode.dark:
         return const Color(0xFFFF8A65);
+      case AppThemeMode.custom:
+        return themeProvider.customColor;
+      default:
+        return const Color(0xFFFF8A65);
     }
-  }
+}
 
   @override
   Widget build(BuildContext context) {

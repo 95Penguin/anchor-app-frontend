@@ -9,6 +9,7 @@ import '../providers/theme_provider.dart';
 import '../utils/app_theme.dart';
 import '../views/edit_anchor_view.dart';
 import '../views/anchor_detail_view.dart';
+import '../views/lazy_image.dart';
 
 class AnchorCard extends StatelessWidget {
   final AnchorModel anchor;
@@ -36,8 +37,12 @@ class AnchorCard extends StatelessWidget {
         return const Color(0xFF4CAF50);
       case AppThemeMode.dark:
         return const Color(0xFFFF8A65);
+      case AppThemeMode.custom:
+        return themeProvider.customColor;
+      default:
+        return const Color(0xFFFF8A65);
     }
-  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -177,17 +182,25 @@ class AnchorCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.file(
-              File(anchor.imagePaths.first),
+            // 使用懒加载图片
+            LazyImage(
+              imagePath: anchor.imagePaths.first,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: accentColor.withOpacity(0.1),
-                  child: Center(
-                    child: Icon(Icons.broken_image, color: textColor.withOpacity(0.4), size: 40),
+              placeholder: Container(
+                color: accentColor.withOpacity(0.1),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(accentColor),
                   ),
-                );
-              },
+                ),
+              ),
+              errorWidget: Container(
+                color: accentColor.withOpacity(0.1),
+                child: Center(
+                  child: Icon(Icons.broken_image, color: textColor.withOpacity(0.4), size: 40),
+                ),
+              ),
             ),
             if (anchor.imagePaths.length > 1)
               Positioned(
@@ -220,8 +233,8 @@ class AnchorCard extends StatelessWidget {
     return SizedBox(
       height: 200,
       child: anchor.imagePaths.length == 1
-          ? Image.file(
-              File(anchor.imagePaths.first),
+          ? LazyImage(
+              imagePath: anchor.imagePaths.first,
               fit: BoxFit.cover,
               width: double.infinity,
             )
@@ -234,8 +247,8 @@ class AnchorCard extends StatelessWidget {
                     left: index == 0 ? 0 : 4,
                     right: index == anchor.imagePaths.length - 1 ? 0 : 4,
                   ),
-                  child: Image.file(
-                    File(anchor.imagePaths[index]),
+                  child: LazyImage(
+                    imagePath: anchor.imagePaths[index],
                     fit: BoxFit.cover,
                     width: 200,
                   ),

@@ -6,6 +6,8 @@ import '../providers/app_provider.dart';
 import '../providers/theme_provider.dart';
 import '../utils/app_theme.dart';
 import '../widgets/anchor_card.dart';
+import '../widgets/animated_empty_state.dart';
+import '../widgets/skeleton_loading.dart';
 
 class TimelineView extends StatefulWidget {
   const TimelineView({Key? key}) : super(key: key);
@@ -66,7 +68,7 @@ class _TimelineViewState extends State<TimelineView> {
         ],
       ),
       body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SkeletonList(itemCount: 5) // 使用骨架屏替代转圈loading
           : provider.anchors.isEmpty
               ? _buildEmptyState(accentColor)
               : RefreshIndicator(
@@ -93,8 +95,12 @@ class _TimelineViewState extends State<TimelineView> {
         return const Color(0xFF4CAF50);
       case AppThemeMode.dark:
         return const Color(0xFFFF8A65);
+      case AppThemeMode.custom:
+        return themeProvider.customColor;
+      default:
+        return const Color(0xFFFF8A65);
     }
-  }
+}
 
   Widget _buildSearchField(AppProvider provider) {
     return TextField(
@@ -320,33 +326,7 @@ class _TimelineViewState extends State<TimelineView> {
   }
 
   Widget _buildEmptyState(Color accentColor) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.anchor,
-            size: 80,
-            color: accentColor.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '时间线空空如也',
-            style: TextStyle(
-              color: Theme.of(context).textTheme.bodyMedium?.color,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '快去投下第一个锚点吧!',
-            style: TextStyle(
-              color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
+    // 使用新的动画空状态组件
+    return AnimatedEmptyState(accentColor: accentColor);
   }
 }

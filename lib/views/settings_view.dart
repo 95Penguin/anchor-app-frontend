@@ -6,6 +6,7 @@ import '../providers/app_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/notification_service.dart';
 import '../utils/app_theme.dart';
+import 'custom_theme_editor.dart';
 
 class SettingsView extends StatefulWidget {
   const SettingsView({Key? key}) : super(key: key);
@@ -58,6 +59,40 @@ class _SettingsViewState extends State<SettingsView> {
                   AppThemeMode.forest,
                   const Color(0xFF4CAF50),
                 ),
+                // 自定义主题色入口
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: themeProvider.currentTheme == AppThemeMode.custom
+                        ? themeProvider.customColor
+                        : Colors.grey[300],
+                    child: Icon(
+                      Icons.palette,
+                      color: themeProvider.currentTheme == AppThemeMode.custom
+                          ? Colors.white
+                          : Colors.grey[600],
+                    ),
+                  ),
+                  title: const Text('自定义主题'),
+                  subtitle: const Text('点击自定义颜色'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (themeProvider.currentTheme == AppThemeMode.custom)
+                        const Icon(Icons.check, color: AppTheme.accentWarmOrange),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CustomThemeEditor(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 1),
                 SwitchListTile(
                   title: const Text('深色模式'),
                   value: themeProvider.isDarkMode,
