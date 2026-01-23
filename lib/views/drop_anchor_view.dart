@@ -598,11 +598,48 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
                 child: Icon(Icons.photo_library, color: Colors.white),
               ),
               title: Text('从相册选择', style: TextStyle(color: textColor)),
+              subtitle: Text(
+                '可一次选择多张 (最多${maxImages}张)',
+                style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 12),
+              ),
               onTap: () async {
                 Navigator.pop(ctx);
-                final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-                if (image != null) {
+                final List<XFile> images = await _picker.pickMultiImage();
+                if (images == null || images.isEmpty) return;
+                
+                
+                // 先设置 loading 状态
+                if (mounted) {
+                  setState(() {
+                    _isLoading = true;
+                  });
+                }
+                
+                // 计算还能选择多少张
+                final remainingSlots = maxImages - _selectedImagePaths.length;
+                final imagesToProcess = images.take(remainingSlots).toList();
+                
+                // 批量处理图片
+                for (final image in imagesToProcess) {
                   await _processImage(image.path);
+                }
+                
+                // 处理完后再设置 loading 状态
+                if (mounted) {
+                  setState(() {
+                    _isLoading = false;
+                  });
+                }
+                
+                // 如果选择的图片超过限制，提示用户
+                if (images.length > remainingSlots && mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('已选择前 $remainingSlots 张图片（最多$maxImages张）'),
+                      backgroundColor: textColor,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                 }
               },
             ),
@@ -611,7 +648,7 @@ class _DropAnchorViewState extends State<DropAnchorView> with SingleTickerProvid
         ),
       ),
     );
-  }
+}
 
   Future<void> _processImage(String imagePath) async {
     setState(() => _isLoading = true);

@@ -241,7 +241,7 @@ class _TimelineViewState extends State<TimelineView> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // 锚点卡片
+                  // 锚点卡片 - 【修改】设置 showFull 为 true 以显示照片
                   Expanded(
                     child: AnchorCard(anchor: anchor, showFull: false),
                   ),
@@ -252,7 +252,7 @@ class _TimelineViewState extends State<TimelineView> {
         );
       },
     );
-  }
+}
 
   Map<String, List> _groupAnchorsByDate(List anchors) {
     Map<String, List> grouped = {};

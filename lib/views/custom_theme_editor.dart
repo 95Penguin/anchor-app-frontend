@@ -77,6 +77,7 @@ class _CustomThemeEditorState extends State<CustomThemeEditor> {
               crossAxisCount: 4,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
+              childAspectRatio: 0.85, // 【修改】从默认的 1.0 改为 0.85，增加高度
             ),
             itemCount: _presetThemes.length,
             itemBuilder: (context, index) {
@@ -90,6 +91,7 @@ class _CustomThemeEditorState extends State<CustomThemeEditor> {
                   });
                 },
                 child: Column(
+                  mainAxisSize: MainAxisSize.min, // 【添加】限制 Column 大小
                   children: [
                     Container(
                       width: 60,
@@ -115,10 +117,14 @@ class _CustomThemeEditorState extends State<CustomThemeEditor> {
                           : null,
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      theme['name'] as String,
-                      style: const TextStyle(fontSize: 10),
-                      textAlign: TextAlign.center,
+                    Flexible( // 【修改】用 Flexible 包裹文本，允许自适应
+                      child: Text(
+                        theme['name'] as String,
+                        style: const TextStyle(fontSize: 10),
+                        textAlign: TextAlign.center,
+                        maxLines: 1, // 【添加】限制最多1行
+                        overflow: TextOverflow.ellipsis, // 【添加】溢出显示省略号
+                      ),
                     ),
                   ],
                 ),

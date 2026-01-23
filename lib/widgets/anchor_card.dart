@@ -175,88 +175,60 @@ class AnchorCard extends StatelessWidget {
       );
     }
 
-    if (!showFull) {
-      return SizedBox(
-        height: 140,
-        width: double.infinity,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 使用懒加载图片
-            LazyImage(
-              imagePath: anchor.imagePaths.first,
-              fit: BoxFit.cover,
-              placeholder: Container(
-                color: accentColor.withOpacity(0.1),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-                  ),
-                ),
-              ),
-              errorWidget: Container(
-                color: accentColor.withOpacity(0.1),
-                child: Center(
-                  child: Icon(Icons.broken_image, color: textColor.withOpacity(0.4), size: 40),
-                ),
-              ),
-            ),
-            if (anchor.imagePaths.length > 1)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.collections, color: Colors.white, size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${anchor.imagePaths.length}',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      );
-    }
-
+    // 列表视图或详情视图都显示照片
     return SizedBox(
-      height: 200,
-      child: anchor.imagePaths.length == 1
-          ? LazyImage(
-              imagePath: anchor.imagePaths.first,
-              fit: BoxFit.cover,
-              width: double.infinity,
-            )
-          : ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: anchor.imagePaths.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: EdgeInsets.only(
-                    left: index == 0 ? 0 : 4,
-                    right: index == anchor.imagePaths.length - 1 ? 0 : 4,
-                  ),
-                  child: LazyImage(
-                    imagePath: anchor.imagePaths[index],
-                    fit: BoxFit.cover,
-                    width: 200,
-                  ),
-                );
-              },
+      height: 140,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 使用懒加载图片
+          LazyImage(
+            imagePath: anchor.imagePaths.first,
+            fit: BoxFit.cover,
+            placeholder: Container(
+              color: accentColor.withOpacity(0.1),
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+                ),
+              ),
             ),
+            errorWidget: Container(
+              color: accentColor.withOpacity(0.1),
+              child: Center(
+                child: Icon(Icons.broken_image, color: textColor.withOpacity(0.4), size: 40),
+              ),
+            ),
+          ),
+          if (anchor.imagePaths.length > 1)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.collections, color: Colors.white, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${anchor.imagePaths.length}',
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
-  }
+}
 
   void _showActionMenu(BuildContext context, Color accentColor, Color backgroundColor, Color textColor) {
     showModalBottomSheet(
